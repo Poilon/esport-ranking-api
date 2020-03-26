@@ -1,6 +1,7 @@
 Tournaments::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'TournamentInputType'
   description 'Properties for updating a Tournament'
+  argument :online, types.Boolean
   argument :result_ids, types[types.String]
 
   argument :date, types.String
