@@ -8,7 +8,7 @@ class Tournament < ApplicationRecord
   def self.total_pages
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: 1, perPage: 150, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
+        tournaments(query: {page: 1, perPage: 75, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
           pageInfo {
             totalPages
           }
@@ -20,7 +20,7 @@ class Tournament < ApplicationRecord
   def self.query(page)
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: #{page}, perPage: 150, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
+        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
           pageInfo {
             totalPages
           }
@@ -50,7 +50,7 @@ class Tournament < ApplicationRecord
     <<~STRING
       query EventQuery {
         event(id: #{id}) {
-          standings(query: {page: 1, perPage: 1000}) {
+          standings(query: {page: 1, perPage: 500}) {
             pageInfo {
               totalPages
             }
@@ -73,16 +73,32 @@ class Tournament < ApplicationRecord
   end
 
   def self.import_tournament_results
-    count = Tournament.pluck(:smashgg_id).count
-    Tournament.pluck(:smashgg_id).each do |smashgg_id|
+    tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
+    count = tournament_ids.count
+    tournament_ids.each do |smashgg_id|
       puts count
       count -= 1
 
-      event = HTTParty.post(
-        'https://api.smash.gg/gql/alpha',
-        body: { query: results_query(smashgg_id) },
-        headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
-      )['data']['event']
+      next if count > 131
+      begin
+        event = HTTParty.post(
+          'https://api.smash.gg/gql/alpha',
+          body: { query: results_query(smashgg_id) },
+          headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
+        )
+      rescue
+        next
+      end
+      sleep(1)
+
+      next unless event['data']
+
+      next unless event['data']['event']
+
+      event = event['data']['event']
+
+      next unless event['standings']
+      next unless event['standings']['nodes']
 
       puts "#{event['standings']['nodes'].count} results to enter"
       event['standings']['nodes'].each do |standing|
@@ -120,6 +136,7 @@ class Tournament < ApplicationRecord
 
     pages_number['data']['tournaments']['pageInfo']['totalPages'].times do |i|
 
+      sleep(1)
       tournaments = HTTParty.post(
         'https://api.smash.gg/gql/alpha',
         body: { query: query(i + 1) },

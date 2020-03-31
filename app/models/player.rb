@@ -7,16 +7,18 @@ class Player < ApplicationRecord
   has_many :teams, through: :player_teams
 
   def self.compute
-    all.each do |p|
-      p.results.each do |r|
-        weight = r.tournament.weight
-        rank = r.rank
+    all.map(&:compute)
+  end
 
-        p.score ||= 1000
-        p.score += (weight.to_f * 1000 * (1 / rank.to_f)) / p.results.count.to_f
-      end
-      p.save
+  def compute
+    self.score = 1000
+    results.each do |r|
+      weight = r.tournament.results.count
+      rank = r.rank
 
+      self.score ||= 1000
+      self.score += (weight.to_f * 1000 * (1 / rank.to_f)) / results.count.to_f
+      save
     end
   end
 
