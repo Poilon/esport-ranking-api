@@ -45,7 +45,6 @@ class Tournament < ApplicationRecord
     STRING
   end
 
-
   def self.results_query(id)
     <<~STRING
       query EventQuery {
@@ -80,6 +79,7 @@ class Tournament < ApplicationRecord
       count -= 1
 
       next if count > 131
+
       begin
         event = HTTParty.post(
           'https://api.smash.gg/gql/alpha',
@@ -101,6 +101,9 @@ class Tournament < ApplicationRecord
       next unless event['standings']['nodes']
 
       puts "#{event['standings']['nodes'].count} results to enter"
+
+      next if event['standings']['nodes'][0] && event['standings']['nodes'][0]['placement'].zero?
+
       event['standings']['nodes'].each do |standing|
 
         player = standing['entrant']['participants'].first['player']
