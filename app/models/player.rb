@@ -11,13 +11,9 @@ class Player < ApplicationRecord
   end
 
   def compute
-    self.score = 1000
+    update(score: 1000)
     results.each do |r|
-      weight = r.tournament.results.count
-      rank = r.rank
-
-      self.score ||= 1000
-      self.score += (weight.to_f * 1000 * (1 / rank.to_f)) / results.count.to_f
+      self.score += (r.tournament.weight.to_f / r.rank.to_f)
       save
     end
   end
