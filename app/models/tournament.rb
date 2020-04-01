@@ -3,8 +3,6 @@ class Tournament < ApplicationRecord
   has_many :results
   belongs_to :game
 
-  validates :smashgg_id, uniqueness: true
-
   def self.total_pages
     <<~STRING
       query TournamentsQuery {
@@ -49,18 +47,26 @@ class Tournament < ApplicationRecord
     <<~STRING
       query EventQuery {
         event(id: #{id}) {
-          standings(query: {page: 1, perPage: 500}) {
-            pageInfo {
-              totalPages
+          phaseGroups {
+            state
+            phase {
+              bracketType
+              name
             }
-            nodes {
-              placement
-              entrant {
-                participants {
-                  player {
-                    id
-                    prefix
-                    gamerTag
+            standings(query: {page: 1, perPage: 1000}) {
+              pageInfo {
+                totalPages
+              }
+              nodes {
+                placement
+                metadata
+                entrant {
+                  participants {
+                    player {
+                      id
+                      prefix
+                      gamerTag
+                    }
                   }
                 }
               }
@@ -75,28 +81,42 @@ class Tournament < ApplicationRecord
     tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
     count = tournament_ids.count
     tournament_ids.each do |smashgg_id|
+
       puts count
       count -= 1
 
-      next if count > 131
-
       begin
-        event = HTTParty.post(
+        events = HTTParty.post(
           'https://api.smash.gg/gql/alpha',
-          body: { query: results_query(smashgg_id) },
+          body: { query: Tournament.results_query(smashgg_id) },
           headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
         )
       rescue
         next
       end
+
       sleep(1)
 
-      next unless event['data']
+      next unless events['data']
 
-      next unless event['data']['event']
+      next unless events['data']['event']
 
-      event = event['data']['event']
+      next if events['data']['event']['phaseGroups'].blank?
 
+      phase_groups = events['data']['event']['phaseGroups'].select do |pg|
+        pg['phase'] &&
+          pg['phase']['bracketType'] == 'DOUBLE_ELIMINATION' && pg['standings'] &&
+          pg['standings']['nodes'] &&
+          pg['standings']['nodes'].map { |n| n['placement'] }.include?(1) &&
+          !pg['phase']['name'].downcase.include?('amateur') &&
+          !pg['phase']['name'].downcase.include?('pools') &&
+          !pg['phase']['name'].downcase.include?('ladder') &&
+          pg['state'] == 3
+      end
+
+      event = phase_groups.first
+
+      next if event.blank?
       next unless event['standings']
       next unless event['standings']['nodes']
 
@@ -105,6 +125,9 @@ class Tournament < ApplicationRecord
       next if event['standings']['nodes'][0] && event['standings']['nodes'][0]['placement'].zero?
 
       event['standings']['nodes'].each do |standing|
+        next unless standing['entrant']
+        next unless standing['entrant']['participants']
+        next unless standing['entrant']['participants'].first
 
         player = standing['entrant']['participants'].first['player']
 
@@ -124,7 +147,6 @@ class Tournament < ApplicationRecord
 
         Result.create(player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: standing['placement'])
       end
-
     end
   end
 
