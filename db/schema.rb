@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_01_135801) do
+ActiveRecord::Schema.define(version: 2020_04_03_114725) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -31,6 +31,16 @@ ActiveRecord::Schema.define(version: 2020_04_01_135801) do
     t.string "slug"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "matches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "winner_player_id"
+    t.uuid "loser_player_id"
+    t.uuid "tournament_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "vod_url"
+    t.bigint "smashgg_id"
   end
 
   create_table "player_characters", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -65,6 +75,7 @@ ActiveRecord::Schema.define(version: 2020_04_01_135801) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "current_mpgr_ranking"
+    t.bigint "smashgg_user_id"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

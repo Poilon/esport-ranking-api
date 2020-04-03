@@ -65,11 +65,15 @@ Metrics/ModuleLength:
     - "spec/support/*"
 
 Metrics/MethodLength:
-  Max: 30
+  Max: 200
   Exclude:
     - "app/serializers/**/**/**"
     - "spec/support/factories.rb"
 
+Metrics/BlockLength:
+  Max: 200
+  Exclude:
+    - "lib/tasks/*"
 
 Metrics/BlockLength:
   Exclude:

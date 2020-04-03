@@ -1,9 +1,10 @@
 class Tournament < ApplicationRecord
 
+  has_many :matches
   has_many :results
   belongs_to :game
 
-  def self.total_pages
+  def self.tournaments_total_pages
     <<~STRING
       query TournamentsQuery {
         tournaments(query: {page: 1, perPage: 75, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
@@ -86,11 +87,7 @@ class Tournament < ApplicationRecord
       count -= 1
 
       begin
-        events = HTTParty.post(
-          'https://api.smash.gg/gql/alpha',
-          body: { query: Tournament.results_query(smashgg_id) },
-          headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
-        )
+        events = query_smash_gg(Tournament.results_query(smashgg_id))
       rescue
         next
       end
@@ -153,20 +150,13 @@ class Tournament < ApplicationRecord
   def self.import_from_smashgg
     game_id = Game.find_by(smashgg_id: 1).id
 
-    pages_number = HTTParty.post(
-      'https://api.smash.gg/gql/alpha',
-      body: { query: total_pages },
-      headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
-    )
+    pages_number = query_smash_gg(tournaments_total_pages)
 
     pages_number['data']['tournaments']['pageInfo']['totalPages'].times do |i|
 
       sleep(1)
-      tournaments = HTTParty.post(
-        'https://api.smash.gg/gql/alpha',
-        body: { query: query(i + 1) },
-        headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
-      )
+      tournaments = query_smash_gg(query(i + 1))
+
       tournaments['data']['tournaments']['nodes'].each do |tournament|
         tournament['events'].each do |event|
           next if event['type'] != 1

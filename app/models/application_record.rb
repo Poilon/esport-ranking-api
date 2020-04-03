@@ -1,4 +1,5 @@
 class ApplicationRecord < ActiveRecord::Base
+
   self.abstract_class = true
 
   def self.visible_for(*)
@@ -20,6 +21,14 @@ class ApplicationRecord < ActiveRecord::Base
         SubscriptionsChannel.broadcast_to(wsc, query: sq.query, result: result.to_s)
       end
     end
+  end
+
+  def self.query_smash_gg(query)
+    HTTParty.post(
+      'https://api.smash.gg/gql/alpha',
+      body: { query: query },
+      headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
+    )
   end
 
 end
