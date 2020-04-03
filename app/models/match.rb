@@ -63,7 +63,8 @@ class Match < ApplicationRecord
     total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
 
     (total_pages || 0).times do |page|
-      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1)).dig('data', 'event', 'sets', 'nodes')
+      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1)).dig('data', 'event', 'sets', 'nodes') || []
+
       matchs.each do |m|
         next if m['displayScore'] == 'DQ'
 
@@ -72,6 +73,8 @@ class Match < ApplicationRecord
         end
         winner_player = player_ids.dig(m['winnerId'])
         loser_player =  player_ids.reject { |k, _| k == m['winnerId'] }&.values&.first
+
+        next if !winner_player || !loser_player
 
         winner_params = {
           smashgg_id: winner_player.dig('player', 'id'),
@@ -85,10 +88,10 @@ class Match < ApplicationRecord
           smashgg_user_id: loser_player.dig('user', 'id')
         }
         winner = Player.find_by(smashgg_id: winner_player.dig('player', 'id'))
-        winner ? winner.update(winner_params) : Player.create(winner_params)
+        winner ? winner.update(winner_params) : winner = Player.create(winner_params)
 
         loser = Player.find_by(smashgg_id: loser_player.dig('player', 'id'))
-        loser ? loser.update(loser_params) : Player.create(loser_params)
+        loser ? loser.update(loser_params) : loser = Player.create(loser_params)
 
         params = {
           smashgg_id: m['id'],
