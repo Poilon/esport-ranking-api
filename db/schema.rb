@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_04_143541) do
+ActiveRecord::Schema.define(version: 2020_04_05_063913) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -77,6 +77,11 @@ ActiveRecord::Schema.define(version: 2020_04_04_143541) do
     t.integer "current_mpgr_ranking"
     t.bigint "smashgg_user_id"
     t.integer "elo"
+    t.string "twitch"
+    t.string "steam"
+    t.string "discord"
+    t.string "mixer"
+    t.string "profile_picture_url"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

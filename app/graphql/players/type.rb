@@ -1,6 +1,11 @@
 Players::Type = GraphQL::ObjectType.define do
   name 'Player'
   field :id, !types.String
+  field :profile_picture_url, types.String
+  field :twitch, types.String
+  field :steam, types.String
+  field :discord, types.String
+  field :mixer, types.String
   field :elo, types.Int
   field :smashgg_user_id, types.Int
   field :current_mpgr_ranking, types.Int

@@ -1,6 +1,11 @@
 Players::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'PlayerInputType'
   description 'Properties for updating a Player'
+  argument :profile_picture_url, types.String
+  argument :twitch, types.String
+  argument :steam, types.String
+  argument :discord, types.String
+  argument :mixer, types.String
   argument :elo, types.Int
   argument :smashgg_user_id, types.Int
   argument :current_mpgr_ranking, types.Int
