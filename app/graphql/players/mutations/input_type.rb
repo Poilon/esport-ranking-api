@@ -1,6 +1,7 @@
 Players::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'PlayerInputType'
   description 'Properties for updating a Player'
+  argument :elo, types.Int
   argument :smashgg_user_id, types.Int
   argument :current_mpgr_ranking, types.Int
   argument :player_character_ids, types[types.String]
