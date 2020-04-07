@@ -1,6 +1,9 @@
 Matches::Type = GraphQL::ObjectType.define do
   name 'Match'
   field :id, !types.String
+  field :is_loser_bracket, types.Boolean
+  field :full_round_text, types.String
+  field :display_score, types.String
   field :played, types.Boolean
   field :smashgg_id, types.Int
   field :vod_url, types.String
@@ -8,6 +11,9 @@ Matches::Type = GraphQL::ObjectType.define do
   field :updated_at, types.String
   field :winner_player_id, types.String
   field :loser_player_id, types.String
+
+  field :winner, Players::Type
+  field :loser, Players::Type
   field :tournament_id, types.String
   field :tournament, Tournaments::Type
 end
