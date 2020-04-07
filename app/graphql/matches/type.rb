@@ -1,6 +1,7 @@
 Matches::Type = GraphQL::ObjectType.define do
   name 'Match'
   field :id, !types.String
+  field :played, types.Boolean
   field :smashgg_id, types.Int
   field :vod_url, types.String
   field :created_at, types.String

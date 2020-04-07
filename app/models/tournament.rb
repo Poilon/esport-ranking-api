@@ -44,7 +44,34 @@ class Tournament < ApplicationRecord
     STRING
   end
 
-  def self.results_query(id)
+  def self.result_query(id, page)
+    <<~STRING
+      query EventQuery {
+        event(id: #{id}) {
+          standings(query: {page: #{page}, perPage: 100}) {
+            pageInfo {
+              totalPages
+            }
+            nodes {
+              placement
+              metadata
+              entrant {
+                participants {
+                  player {
+                    id
+                    prefix
+                    gamerTag
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    STRING
+  end
+
+  def self.result_query_with_phases(id, page)
     <<~STRING
       query EventQuery {
         event(id: #{id}) {
@@ -54,7 +81,7 @@ class Tournament < ApplicationRecord
               bracketType
               name
             }
-            standings(query: {page: 1, perPage: 1000}) {
+            standings(query: {page: #{page}, perPage: 5}) {
               pageInfo {
                 totalPages
               }
@@ -79,72 +106,111 @@ class Tournament < ApplicationRecord
   end
 
   def self.import_tournament_results
-    tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
-    count = tournament_ids.count
-    tournament_ids.each do |smashgg_id|
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
 
+    # tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
+    tournament_ids = [342_224]
+
+    tournament_ids.each do |smashgg_id|
+      pages_count = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event', 'standings', 'pageInfo', 'totalPages') || 0
+      puts "Tournament => #{Tournament.find_by(smashgg_id: smashgg_id)&.name}..."
+      pages_count.times do |page|
+        puts "Standings => page #{page + 1}..."
+        standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes')
+        standings.each do |s|
+          player = s.dig('entrant', 'participants')&.first&.try(:[], 'player')
+          next unless player
+
+          params = { smashgg_id: player['id'], name: player['gamerTag'] }
+          p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
+
+          Result.find_or_create_by(
+            player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
+          )
+        end
+      end
+    end
+
+    ActiveRecord::Base.logger = old_logger
+  end
+
+  def self.import_tournament_results_by_phase
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+
+    tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
+
+    count = tournament_ids.count
+
+    tournament_ids.each do |smashgg_id|
       puts count
       count -= 1
 
-      begin
-        events = query_smash_gg(Tournament.results_query(smashgg_id))
-      rescue
-        next
-      end
+      pages_count = query_smash_gg(results_query(smashgg_id, 1)).dig('data', 'event', 'phaseGroups','standings', 'pageInfo', 'totalPages') || 0
 
-      sleep(1)
-
-      next unless events['data']
-
-      next unless events['data']['event']
-
-      next if events['data']['event']['phaseGroups'].blank?
-
-      phase_groups = events['data']['event']['phaseGroups'].select do |pg|
-        pg['phase'] &&
-          pg['phase']['bracketType'] == 'DOUBLE_ELIMINATION' && pg['standings'] &&
-          pg['standings']['nodes'] &&
-          pg['standings']['nodes'].map { |n| n['placement'] }.include?(1) &&
-          !pg['phase']['name'].downcase.include?('amateur') &&
-          !pg['phase']['name'].downcase.include?('pools') &&
-          !pg['phase']['name'].downcase.include?('ladder') &&
-          pg['state'] == 3
-      end
-
-      event = phase_groups.first
-
-      next if event.blank?
-      next unless event['standings']
-      next unless event['standings']['nodes']
-
-      puts "#{event['standings']['nodes'].count} results to enter"
-
-      next if event['standings']['nodes'][0] && event['standings']['nodes'][0]['placement'].zero?
-
-      event['standings']['nodes'].each do |standing|
-        next unless standing['entrant']
-        next unless standing['entrant']['participants']
-        next unless standing['entrant']['participants'].first
-
-        player = standing['entrant']['participants'].first['player']
-
-        next unless player
-
-        params = {
-          name: player['gamerTag']
-        }
-
-        if (p = Player.find_by(smashgg_id: player['id']))
-          p.update(params)
-        else
-          p = Player.create({ smashgg_id: player['id'] }.merge(params))
+      pages_count.times do |page|
+        begin
+          events = query_smash_gg(Tournament.results_query(smashgg_id, page + 1))
+        rescue
+          next
         end
 
-        next if Result.find_by(tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, player_id: p.id)
+        sleep(1)
 
-        Result.create(player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: standing['placement'])
+        next unless events['data']
+
+        next unless events['data']['event']
+
+        next if events['data']['event']['phaseGroups'].blank?
+
+        phase_groups = events['data']['event']['phaseGroups'].select do |pg|
+          pg['phase'] &&
+            pg['phase']['bracketType'] == 'DOUBLE_ELIMINATION' && pg['standings'] &&
+            pg['standings']['nodes'] &&
+            pg['standings']['nodes'].map { |n| n['placement'] }.include?(1) &&
+            !pg['phase']['name'].downcase.include?('amateur') &&
+            !pg['phase']['name'].downcase.include?('pools') &&
+            !pg['phase']['name'].downcase.include?('ladder') &&
+            pg['state'] == 3
+        end
+
+        event = phase_groups.first
+
+        next if event.blank?
+        next unless event['standings']
+        next unless event['standings']['nodes']
+
+        puts "#{event['standings']['nodes'].count} results to enter"
+
+        next if event['standings']['nodes'][0] && event['standings']['nodes'][0]['placement'].zero?
+
+        event['standings']['nodes'].each do |standing|
+          next unless standing['entrant']
+          next unless standing['entrant']['participants']
+          next unless standing['entrant']['participants'].first
+
+          player = standing['entrant']['participants'].first['player']
+
+          next unless player
+
+          params = {
+            name: player['gamerTag']
+          }
+
+          if (p = Player.find_by(smashgg_id: player['id']))
+            p.update(params)
+          else
+            p = Player.create({ smashgg_id: player['id'] }.merge(params))
+          end
+
+          next if Result.find_by(tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, player_id: p.id)
+
+          Result.create(player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: standing['placement'])
+        end
       end
     end
+    ActiveRecord::Base.logger = old_logger
   end
 
   def self.import_from_smashgg

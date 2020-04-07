@@ -51,6 +51,18 @@ class Player < ApplicationRecord
     end
   end
 
+  def best_win
+    winning_matches.joins(:loser).order('players.elo desc').first
+  end
+
+  def best_wins(number)
+    winning_matches.joins(:loser).order('players.elo desc').first(number)
+  end
+
+  def worst_lose
+    losing_matches.joins(:winner).order('players.elo asc').first
+  end
+
   def self.hydrate_players_info
     Player.where('smashgg_user_id is not null and country is null').each do |player|
       smashgg_user_id = player.smashgg_user_id
@@ -92,15 +104,6 @@ class Player < ApplicationRecord
 
       player.update(params)
     end
-  end
-
-  def self.reset_elo
-    puts 'Are you sure ? yes to accept'
-    res = gets.strip
-    return if res != 'y' && res != 'yes'
-
-    Player.update_all(elo: 1500)
-    Player.update_all(current_mpgr_ranking: nil)
   end
 
 end

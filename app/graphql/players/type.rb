@@ -36,4 +36,17 @@ Players::Type = GraphQL::ObjectType.define do
   field :youtube, types.String
   field :wiki, types.String
   field :score, types.Int
+
+  field :best_win, Matches::Type do
+    resolve ->(obj, _, _) { Player.find(obj.id).best_win }
+  end
+
+  field :worst_lose, Matches::Type do
+    resolve ->(obj, _, _) { Player.find(obj.id).worst_lose }
+  end
+
+  field :matches_count, types.Int do
+    resolve ->(obj, _, _) { Player.find(obj.id).winning_matches.count + Player.find(obj.id).losing_matches.count }
+  end
+
 end

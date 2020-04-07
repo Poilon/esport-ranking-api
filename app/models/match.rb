@@ -53,13 +53,45 @@ class Match < ApplicationRecord
     STRING
   end
 
-  def self.import_all_matches
-    Tournament.pluck(:smashgg_id).each do |smashgg_event_id|
-      import_match_of_tournament_from_smashgg(smashgg_event_id)
+  def self.reset!
+    Match.update_all(played: false)
+    Player.update_all(elo: 1500)
+    Player.where('current_mpgr_ranking is not null').each do |p|
+      p.update(elo: 2500 - p.current_mpgr_ranking * 5)
     end
   end
 
-  def self.import_match_of_tournament_from_smashgg(smashgg_event_id)
+  def self.run
+    bar = ProgressBar.new(where(played: false).count)
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+    EloRating.k_factor = 40
+    where(played: false).joins(:tournament).order('tournaments.date asc').each do |match|
+      match.adjust_elo
+      bar.increment!
+    end
+    ActiveRecord::Base.logger = old_logger
+  end
+
+  def adjust_elo
+    return if played == true
+
+    m = EloRating::Match.new
+    m.add_player(rating: loser.elo)
+    m.add_player(rating: winner.elo, winner: true)
+    new_ratings = m.updated_ratings
+    loser.update_attribute(:elo, new_ratings[0])
+    winner.update_attribute(:elo, new_ratings[1])
+    update_attribute(:played, true)
+  end
+
+  def self.import_all_matches
+    Tournament.pluck(:smashgg_id).each do |smashgg_event_id|
+      import_matches_of_tournament_from_smashgg(smashgg_event_id)
+    end
+  end
+
+  def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
     total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
 
     (total_pages || 0).times do |page|
@@ -77,14 +109,12 @@ class Match < ApplicationRecord
         next if !winner_player || !loser_player
 
         winner_params = {
-          smashgg_id: winner_player.dig('player', 'id'),
-          name: winner_player.dig('player', 'gamerTag'),
+          smashgg_id: winner_player.dig('player', 'id'), name: winner_player.dig('player', 'gamerTag'),
           smashgg_user_id: winner_player.dig('user', 'id')
         }
 
         loser_params = {
-          smashgg_id: loser_player.dig('player', 'id'),
-          name: loser_player.dig('player', 'gamerTag'),
+          smashgg_id: loser_player.dig('player', 'id'), name: loser_player.dig('player', 'gamerTag'),
           smashgg_user_id: loser_player.dig('user', 'id')
         }
         winner = Player.find_by(smashgg_id: winner_player.dig('player', 'id'))
@@ -94,11 +124,8 @@ class Match < ApplicationRecord
         loser ? loser.update(loser_params) : loser = Player.create(loser_params)
 
         params = {
-          smashgg_id: m['id'],
-          tournament_id: Tournament.find_by(smashgg_id: smashgg_event_id)&.id,
-          winner_player_id: winner.id,
-          loser_player_id: loser.id,
-          vod_url: m['vod_url']
+          smashgg_id: m['id'], tournament_id: Tournament.find_by(smashgg_id: smashgg_event_id)&.id,
+          winner_player_id: winner.id, loser_player_id: loser.id, vod_url: m['vod_url']
         }
         db_match = Match.find_by(smashgg_id: m['id'])
         db_match ? db_match.update(params) : Match.create(params)

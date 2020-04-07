@@ -1,6 +1,7 @@
 Matches::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'MatchInputType'
   description 'Properties for updating a Match'
+  argument :played, types.Boolean
   argument :smashgg_id, types.Int
   argument :vod_url, types.String
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_05_063913) do
+ActiveRecord::Schema.define(version: 2020_04_05_124716) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -41,6 +41,7 @@ ActiveRecord::Schema.define(version: 2020_04_05_063913) do
     t.datetime "updated_at", null: false
     t.string "vod_url"
     t.bigint "smashgg_id"
+    t.boolean "played"
   end
 
   create_table "player_characters", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
