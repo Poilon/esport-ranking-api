@@ -24,6 +24,15 @@ QueryType = GraphQL::ObjectType.define do
   field :countries, types[types.String] do
     resolve ->(_, _, _) { Player.pluck(:country).uniq.compact.sort }
   end
+  field :states, types[types.String] do
+    argument :country, types.String
+    resolve ->(_, args, _) { Player.where(country: args[:country]).pluck(:state).uniq.compact.sort }
+  end
+  field :cities, types[types.String] do
+    argument :country, types.String
+    argument :state, types.String
+    resolve ->(_, args, _) { Player.where(country: args[:country], state: args[:state]).pluck(:city).uniq.compact.sort }
+  end
 
   field :me, Users::Type do
     description 'Returns the current user'
