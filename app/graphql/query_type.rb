@@ -21,6 +21,10 @@ QueryType = GraphQL::ObjectType.define do
 
   end
 
+  field :countries, types[types.String] do
+    resolve ->(_, _, _) { Player.pluck(:country).uniq.compact.sort }
+  end
+
   field :me, Users::Type do
     description 'Returns the current user'
     resolve ->(_, _, ctx) { ctx[:current_user] }

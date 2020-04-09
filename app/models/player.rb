@@ -53,17 +53,17 @@ class Player < ApplicationRecord
   end
 
   def self.hydrate_players_info
-    Player.where('smashgg_user_id is not null and country is null').each do |player|
-      smashgg_user_id = player.smashgg_user_id
-      puts smashgg_user_id
-      sleep(1)
-      begin
-        smashgg_user = query_smash_gg(user_query(smashgg_user_id))
-      rescue
-        next
-      end
-      puts smashgg_user.dig('data', 'user', 'player', 'gamerTag')
+    players = Player.where('smashgg_user_id is not null and country is null').order(elo: :desc)
 
+    bar = ProgressBar.new(players.count)
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+
+    players.each do |player|
+      bar.increment!
+      smashgg_user_id = player.smashgg_user_id
+      sleep(1)
+      smashgg_user = query_smash_gg(user_query(smashgg_user_id))
       params = {
         current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
           r['title'] != 'MPGR: 2019 MPGR'
@@ -93,6 +93,7 @@ class Player < ApplicationRecord
 
       player.update(params)
     end
+    ActiveRecord::Base.logger = old_logger
   end
 
 end

@@ -58,9 +58,6 @@ class Match < ApplicationRecord
   def self.reset!
     Match.update_all(played: false)
     Player.update_all(elo: 1500)
-    Player.where('current_mpgr_ranking is not null').each do |p|
-      p.update(elo: 2100 - p.current_mpgr_ranking * 5)
-    end
   end
 
   def self.run
