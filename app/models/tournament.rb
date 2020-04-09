@@ -7,7 +7,7 @@ class Tournament < ApplicationRecord
   def self.tournaments_total_pages
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: 1, perPage: 75, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
+        tournaments(query: {page: 1, perPage: 75, sortBy: "endAt asc", filter: { past: true, videogameIds: [1] }  }){
           pageInfo {
             totalPages
           }
@@ -19,7 +19,7 @@ class Tournament < ApplicationRecord
   def self.query(page)
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: { past: true, afterDate: 1577833200, videogameIds: [1] }  }){
+        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: { past: true, videogameIds: [1] }  }){
           pageInfo {
             totalPages
           }
@@ -28,6 +28,7 @@ class Tournament < ApplicationRecord
             name
             endAt
             events {
+              state
               id
               isOnline
               name
@@ -48,13 +49,13 @@ class Tournament < ApplicationRecord
     <<~STRING
       query EventQuery {
         event(id: #{id}) {
+          state
           standings(query: {page: #{page}, perPage: 100}) {
             pageInfo {
               totalPages
             }
             nodes {
               placement
-              metadata
               entrant {
                 participants {
                   player {
@@ -81,13 +82,12 @@ class Tournament < ApplicationRecord
               bracketType
               name
             }
-            standings(query: {page: #{page}, perPage: 5}) {
+            standings(query: {page: #{page}, perPage: 10}) {
               pageInfo {
                 totalPages
               }
               nodes {
                 placement
-                metadata
                 entrant {
                   participants {
                     player {
@@ -109,22 +109,26 @@ class Tournament < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
 
-    # tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
-    tournament_ids = [342_224]
+    tournament_ids = Tournament.where(processed: false).pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
+    bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_id|
-      pages_count = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event', 'standings', 'pageInfo', 'totalPages') || 0
-      puts "Tournament => #{Tournament.find_by(smashgg_id: smashgg_id)&.name}..."
+      bar.increment!
+
+      event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
+      Tournament.find_by(smashgg_id: smashgg_id).update(processed: true)
+      next if !event || event.dig('state') != 'COMPLETED'
+
+      pages_count = event.dig('standings', 'pageInfo', 'totalPages') || 0
       pages_count.times do |page|
-        puts "Standings => page #{page + 1}..."
-        standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes')
+
+        standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes') || []
         standings.each do |s|
           player = s.dig('entrant', 'participants')&.first&.try(:[], 'player')
           next unless player
 
           params = { smashgg_id: player['id'], name: player['gamerTag'] }
           p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
-
           Result.find_or_create_by(
             player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
           )
@@ -216,14 +220,19 @@ class Tournament < ApplicationRecord
   def self.import_from_smashgg
     game_id = Game.find_by(smashgg_id: 1).id
 
-    pages_number = query_smash_gg(tournaments_total_pages)
+    pages_number = query_smash_gg(
+      tournaments_total_pages
+    ).dig('data', 'tournaments', 'pageInfo', 'totalPages')
 
-    pages_number['data']['tournaments']['pageInfo']['totalPages'].times do |i|
-
+    old_logger = ActiveRecord::Base.logger
+    bar = ProgressBar.new(pages_number)
+    ActiveRecord::Base.logger = nil
+    pages_number.times do |i|
+      bar.increment!
       sleep(1)
-      tournaments = query_smash_gg(query(i + 1))
+      tournaments = query_smash_gg(query(i + 1)).dig('data', 'tournaments', 'nodes') || []
 
-      tournaments['data']['tournaments']['nodes'].each do |tournament|
+      tournaments.each do |tournament|
         tournament['events'].each do |event|
           next if event['type'] != 1
           next if event['videogame']['id'] != 1
@@ -244,6 +253,7 @@ class Tournament < ApplicationRecord
         end
       end
     end
+    ActiveRecord::Base.logger = old_logger
   end
 
 end

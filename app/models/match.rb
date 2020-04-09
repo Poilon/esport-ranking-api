@@ -4,11 +4,11 @@ class Match < ApplicationRecord
   belongs_to :winner, class_name: 'Player', foreign_key: 'winner_player_id'
   belongs_to :loser, class_name: 'Player', foreign_key: 'loser_player_id'
 
-  def self.matchs_total_pages(id)
+  def self.matchs_total_pages(id, per_page)
     <<~STRING
       query MatchesTotalPagesQuery {
         event(id: #{id}) {
-          sets(page: 1, perPage: 50) {
+          sets(page: 1, perPage: #{per_page}) {
             pageInfo {
               totalPages
             }
@@ -18,11 +18,11 @@ class Match < ApplicationRecord
     STRING
   end
 
-  def self.matchs_query(id, page)
+  def self.matchs_query(id, page, per_page)
     <<~STRING
       query MatchesQuery {
         event(id: #{id}) {
-          sets(page: #{page}, perPage: 50) {
+          sets(page: #{page}, perPage: #{per_page}) {
             pageInfo {
               totalPages
             }
@@ -59,7 +59,7 @@ class Match < ApplicationRecord
     Match.update_all(played: false)
     Player.update_all(elo: 1500)
     Player.where('current_mpgr_ranking is not null').each do |p|
-      p.update(elo: 2500 - p.current_mpgr_ranking * 5)
+      p.update(elo: 2100 - p.current_mpgr_ranking * 5)
     end
   end
 
@@ -68,7 +68,7 @@ class Match < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
     EloRating.k_factor = 40
-    where(played: false).joins(:tournament).order('tournaments.date asc').each do |match|
+    joins(:tournament).order('tournaments.date desc').where(played: false).joins(:tournament).order('tournaments.date asc').each do |match|
       match.adjust_elo
       bar.increment!
     end
@@ -90,17 +90,28 @@ class Match < ApplicationRecord
   end
 
   def self.import_all_matches
-    Tournament.pluck(:smashgg_id).each do |smashgg_event_id|
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+    tournament_ids = Tournament.joins(:results).pluck(:smashgg_id).uniq
+    minus = Tournament.joins(:matches).pluck(:smashgg_id).uniq
+    tournament_ids -= minus
+    bar = ProgressBar.new(tournament_ids.count)
+
+    tournament_ids.each do |smashgg_event_id|
+      bar.increment!
       import_matches_of_tournament_from_smashgg(smashgg_event_id)
     end
+
+    ActiveRecord::Base.logger = old_logger
   end
 
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
-    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
+    binding.pry
+    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
 
     (total_pages || 0).times do |page|
-      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1)).dig('data', 'event', 'sets', 'nodes') || []
-
+      sleep(1)
+      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 80)).dig('data', 'event', 'sets', 'nodes') || []
       matchs.each do |m|
         next if m['displayScore'] == 'DQ'
 
@@ -130,7 +141,7 @@ class Match < ApplicationRecord
         params = {
           smashgg_id: m['id'], tournament_id: Tournament.find_by(smashgg_id: smashgg_event_id)&.id,
           winner_player_id: winner.id, loser_player_id: loser.id, vod_url: m['vod_url'],
-          is_loser_bracket: m['round'].negative?, display_score: m['displayScore'], full_round_text: m['fullRoundText']
+          is_loser_bracket: m['round']&.negative?, display_score: m['displayScore'], full_round_text: m['fullRoundText']
         }
         db_match = Match.find_by(smashgg_id: m['id'])
         db_match ? db_match.update(params) : Match.create(params)

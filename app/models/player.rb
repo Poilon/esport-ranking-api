@@ -8,10 +8,6 @@ class Player < ApplicationRecord
   has_many :winning_matches, class_name: 'Match', foreign_key: 'winner_player_id'
   has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id'
 
-  def self.compute
-    all.map(&:compute)
-  end
-
   def self.user_query(smashgg_user_id)
     <<~STRING
       query UserQuery {
@@ -42,13 +38,6 @@ class Player < ApplicationRecord
         }
       }
     STRING
-  end
-
-  def compute
-    results.each do |r|
-      self.score += (r.tournament.weight / r.rank.to_f)
-      save
-    end
   end
 
   def best_win

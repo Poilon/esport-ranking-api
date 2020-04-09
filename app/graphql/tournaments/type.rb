@@ -1,6 +1,7 @@
 Tournaments::Type = GraphQL::ObjectType.define do
   name 'Tournament'
   field :id, !types.String
+  field :processed, types.Boolean
   field :match_ids, types[types.String] do
     resolve CollectionIdsResolver
   end
