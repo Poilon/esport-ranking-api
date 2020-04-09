@@ -92,21 +92,19 @@ class Match < ApplicationRecord
   def self.import_all_matches
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
-    tournament_ids = Tournament.joins(:results).pluck(:smashgg_id).uniq
-    minus = Tournament.joins(:matches).pluck(:smashgg_id).uniq
-    tournament_ids -= minus
+    tournament_ids = Tournament.where(imported_matches: false).joins(:results).pluck(:smashgg_id).uniq
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_event_id|
       bar.increment!
       import_matches_of_tournament_from_smashgg(smashgg_event_id)
+      Tournament.find_by(smashgg_id: smashgg_event_id)&.update(imported_matches: true)
     end
 
     ActiveRecord::Base.logger = old_logger
   end
 
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
-    binding.pry
     total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
 
     (total_pages || 0).times do |page|
