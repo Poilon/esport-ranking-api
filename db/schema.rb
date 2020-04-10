@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_09_083540) do
+ActiveRecord::Schema.define(version: 2020_04_10_075511) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -21,6 +21,14 @@ ActiveRecord::Schema.define(version: 2020_04_09_083540) do
     t.string "name"
     t.string "slug"
     t.uuid "game_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "elo_by_times", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "date"
+    t.uuid "player_id"
+    t.integer "elo"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

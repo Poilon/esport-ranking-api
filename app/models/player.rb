@@ -1,5 +1,6 @@
 class Player < ApplicationRecord
 
+  has_many :elo_by_times
   has_many :player_characters
   has_many :characters, through: :player_characters
   has_many :results

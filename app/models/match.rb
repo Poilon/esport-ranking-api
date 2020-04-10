@@ -80,9 +80,13 @@ class Match < ApplicationRecord
     m = EloRating::Match.new
     m.add_player(rating: loser.elo)
     m.add_player(rating: winner.elo, winner: true)
+
     new_ratings = m.updated_ratings
     loser.update_attribute(:elo, new_ratings[0])
+    EloByTime.create(player_id: loser.id, elo: new_ratings[0], date: m.tournament.date)
     winner.update_attribute(:elo, new_ratings[1])
+    EloByTime.create(player_id: winner.id, elo: new_ratings[1], date: m.tournament.date)
+
     update_attribute(:played, true)
   end
 

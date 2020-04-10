@@ -1,6 +1,10 @@
 Players::Type = GraphQL::ObjectType.define do
   name 'Player'
   field :id, !types.String
+  field :elo_by_time_ids, types[types.String] do
+    resolve CollectionIdsResolver
+  end
+  field :elo_by_times, types[EloByTimes::Type]
   field :profile_picture_url, types.String
   field :twitch, types.String
   field :steam, types.String
