@@ -60,7 +60,6 @@ class Player < ApplicationRecord
     ActiveRecord::Base.logger = nil
 
     players.each do |player|
-      bar.increment!
       smashgg_user_id = player.smashgg_user_id
       sleep(1)
       smashgg_user = query_smash_gg(user_query(smashgg_user_id))
@@ -92,6 +91,7 @@ class Player < ApplicationRecord
       }.reject { |_, v| v.blank? }
 
       player.update(params)
+      bar.increment!
     end
     ActiveRecord::Base.logger = old_logger
   end

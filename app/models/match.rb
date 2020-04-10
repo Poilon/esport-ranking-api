@@ -93,9 +93,9 @@ class Match < ApplicationRecord
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_event_id|
-      bar.increment!
       import_matches_of_tournament_from_smashgg(smashgg_event_id)
       Tournament.find_by(smashgg_id: smashgg_event_id)&.update(imported_matches: true)
+      bar.increment!
     end
 
     ActiveRecord::Base.logger = old_logger

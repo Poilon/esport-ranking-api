@@ -16,6 +16,30 @@ class Tournament < ApplicationRecord
     STRING
   end
 
+  def self.single_tournament_query(tournament_id)
+    <<~STRING
+      query SingleTournamentQuery {
+        tournament(id: "#{tournament_id}") {
+          id
+          name
+          endAt
+          events {
+            state
+            id
+            isOnline
+            name
+            slug
+            type
+            videogame {
+              id
+              name
+            }
+          }
+        }
+      }
+    STRING
+  end
+
   def self.query(page)
     <<~STRING
       query TournamentsQuery {
@@ -113,8 +137,6 @@ class Tournament < ApplicationRecord
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_id|
-      bar.increment!
-
       event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
       Tournament.find_by(smashgg_id: smashgg_id).update(processed: true)
       next if !event || event.dig('state') != 'COMPLETED'
@@ -134,6 +156,7 @@ class Tournament < ApplicationRecord
           )
         end
       end
+      bar.increment!
     end
 
     ActiveRecord::Base.logger = old_logger
