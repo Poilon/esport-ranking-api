@@ -1,6 +1,10 @@
 Matches::Type = GraphQL::ObjectType.define do
   name 'Match'
   field :id, !types.String
+  field :elo_by_time_ids, types[types.String] do
+    resolve CollectionIdsResolver
+  end
+  field :elo_by_times, types[EloByTimes::Type]
   field :is_loser_bracket, types.Boolean
   field :full_round_text, types.String
   field :display_score, types.String

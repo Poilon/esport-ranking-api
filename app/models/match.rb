@@ -1,5 +1,6 @@
 class Match < ApplicationRecord
 
+  has_many :elo_by_times
   belongs_to :tournament
   belongs_to :winner, class_name: 'Player', foreign_key: 'winner_player_id'
   belongs_to :loser, class_name: 'Player', foreign_key: 'loser_player_id'
@@ -58,6 +59,7 @@ class Match < ApplicationRecord
   def self.reset!
     Match.update_all(played: false)
     Player.update_all(elo: 1500)
+    EloByTime.delete_all
   end
 
   def self.run
@@ -65,7 +67,7 @@ class Match < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
     EloRating.k_factor = 40
-    joins(:tournament).order('tournaments.date desc').where(played: false).joins(:tournament).order('tournaments.date asc').each do |match|
+    joins(:tournament).order('tournaments.date asc').where(played: false).each do |match|
       match.adjust_elo
       bar.increment!
     end
@@ -83,9 +85,9 @@ class Match < ApplicationRecord
 
     new_ratings = m.updated_ratings
     loser.update_attribute(:elo, new_ratings[0])
-    EloByTime.create(player_id: loser.id, elo: new_ratings[0], date: m.tournament.date)
+    EloByTime.create(player_id: loser.id, elo: new_ratings[0], date: tournament.date, match_id: id)
     winner.update_attribute(:elo, new_ratings[1])
-    EloByTime.create(player_id: winner.id, elo: new_ratings[1], date: m.tournament.date)
+    EloByTime.create(player_id: winner.id, elo: new_ratings[1], date: tournament.date, match_id: id)
 
     update_attribute(:played, true)
   end

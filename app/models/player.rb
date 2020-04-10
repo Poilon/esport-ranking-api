@@ -9,6 +9,21 @@ class Player < ApplicationRecord
   has_many :winning_matches, class_name: 'Match', foreign_key: 'winner_player_id'
   has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id'
 
+  def elo_map
+    return [] unless elo_by_times.order('date asc').first
+
+    start_date = elo_by_times.order('date asc').first.date.to_date
+    end_date = Date.today
+
+    number_of_months = (end_date.year * 12 + end_date.month) - (start_date.year * 12 + start_date.month)
+    dates = number_of_months.times.each_with_object([]) do |count, array|
+      array << start_date.beginning_of_month + count.months
+    end
+    hash = dates.each_with_object({}) do |e, h|
+      h[e] = elo_by_times.min_by { |et| (et.date.to_time - e.to_time).abs }
+    end.to_json
+  end
+
   def self.user_query(smashgg_user_id)
     <<~STRING
       query UserQuery {
