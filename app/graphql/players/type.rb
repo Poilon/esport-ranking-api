@@ -1,6 +1,7 @@
 Players::Type = GraphQL::ObjectType.define do
   name 'Player'
   field :id, !types.String
+  field :elo_json, types.String
   field :elo_by_time_ids, types[types.String] do
     resolve CollectionIdsResolver
   end

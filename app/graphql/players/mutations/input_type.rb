@@ -1,6 +1,7 @@
 Players::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'PlayerInputType'
   description 'Properties for updating a Player'
+  argument :elo_json, types.String
   argument :elo_by_time_ids, types[types.String]
   argument :profile_picture_url, types.String
   argument :twitch, types.String
