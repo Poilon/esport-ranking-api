@@ -7,7 +7,7 @@ class Tournament < ApplicationRecord
   def self.tournaments_total_pages
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: 1, perPage: 75, sortBy: "endAt asc", filter: { past: true, videogameIds: [1] }  }){
+        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc" }){
           pageInfo {
             totalPages
           }
@@ -43,7 +43,7 @@ class Tournament < ApplicationRecord
   def self.query(page)
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: { past: true, videogameIds: [1] }  }){
+        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc"}){
           pageInfo {
             totalPages
           }
@@ -133,7 +133,7 @@ class Tournament < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
 
-    tournament_ids = Tournament.where(processed: false).pluck(:smashgg_id) - Tournament.joins(:results).uniq.pluck(:smashgg_id)
+    tournament_ids = Tournament.where(processed: false).pluck(:smashgg_id)
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_id|
@@ -151,6 +151,7 @@ class Tournament < ApplicationRecord
 
           params = { smashgg_id: player['id'], name: player['gamerTag'] }
           p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
+          puts 'New result' unless Result.find_by(player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id)
           Result.find_or_create_by(
             player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
           )
@@ -240,6 +241,33 @@ class Tournament < ApplicationRecord
     ActiveRecord::Base.logger = old_logger
   end
 
+  def self.import_from_smasgg_id(smashgg_id)
+    tournament = query_smash_gg(single_tournament_query(smashgg_id)).dig('data', 'tournament')
+    game_id = Game.find_by(smashgg_id: 1).id
+
+    return unless tournament
+
+    tournament['events'].each do |event|
+
+      next if event['type'] != 1
+      next if event['videogame']['id'] != 1
+
+      params = {
+        smashgg_link_url: "https://smash.gg/#{event['slug']}",
+        name: tournament['name'].to_s + ' - ' + event['name'].to_s,
+        date: Time.at(tournament['endAt']),
+        game_id: game_id,
+        online: event['isOnline']
+      }
+
+      if (t = Tournament.find_by(smashgg_id: event['id']))
+        t.update(params)
+      else
+        Tournament.create({ smashgg_id: event['id'] }.merge(params))
+      end
+    end
+  end
+
   def self.import_from_smashgg
     game_id = Game.find_by(smashgg_id: 1).id
 
@@ -256,7 +284,8 @@ class Tournament < ApplicationRecord
       tournaments = query_smash_gg(query(i + 1)).dig('data', 'tournaments', 'nodes') || []
 
       tournaments.each do |tournament|
-        tournament['events'].each do |event|
+        (tournament['events'] || []).each do |event|
+
           next if event['type'] != 1
           next if event['videogame']['id'] != 1
 

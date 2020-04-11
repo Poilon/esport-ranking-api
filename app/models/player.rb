@@ -20,7 +20,7 @@ class Player < ApplicationRecord
       array << start_date.beginning_of_month + count.months
     end
     hash = dates.each_with_object({}) do |e, h|
-      h[e] = elo_by_times.min_by { |et| (et.date.to_time - e.to_time).abs }
+      h[e] = elo_by_times.select { |et| et.date.to_time < e.to_time }.first || elo_by_times.order(date: :asc).first
     end.to_json
   end
 

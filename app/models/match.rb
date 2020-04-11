@@ -142,7 +142,9 @@ class Match < ApplicationRecord
         params = {
           smashgg_id: m['id'], tournament_id: Tournament.find_by(smashgg_id: smashgg_event_id)&.id,
           winner_player_id: winner.id, loser_player_id: loser.id, vod_url: m['vod_url'],
-          is_loser_bracket: m['round']&.negative?, display_score: m['displayScore'], full_round_text: m['fullRoundText']
+          is_loser_bracket: m['round']&.negative?, display_score: m['displayScore'], full_round_text: m['fullRoundText'],
+          round: m['round']
+
         }
         db_match = Match.find_by(smashgg_id: m['id'])
         db_match ? db_match.update(params) : Match.create(params)
