@@ -21,10 +21,13 @@ class Player < ApplicationRecord
     end
 
     hash = dates.each_with_object({}) do |e, h|
-      h[Date.parse('2015-01-01')] = { elo: 1500, date: dates.first }
-      h[dates.last] = { elo: elo_by_times.order(created_at: :asc).last&.elo || 1500, date: dates.first }
       h[e] ||= elo_by_times.where('date < ?', e).order(created_at: :asc)&.last || { elo: 1500, date: dates.first }
-    end.sort_by { |k, v| k }.to_h.to_json
+    end
+
+    hash[Date.parse('2015-01-01')] = { elo: 1500, date: dates.first }
+    hash[dates.last] = { elo: elo_by_times.order(created_at: :asc).last&.elo || 1500, date: dates.first }
+
+    hash.sort_by { |k, _| k }.to_h.to_json
   end
 
   def self.user_query(smashgg_user_id)
