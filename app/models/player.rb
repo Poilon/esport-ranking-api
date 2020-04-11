@@ -12,16 +12,19 @@ class Player < ApplicationRecord
   def elo_map
     return [] unless elo_by_times.order('date asc').first
 
-    start_date = elo_by_times.order('date asc').first.date.to_date
+    start_date = Date.parse('2015-01-01')
     end_date = Date.today
 
     number_of_months = (end_date.year * 12 + end_date.month) - (start_date.year * 12 + start_date.month)
     dates = number_of_months.times.each_with_object([]) do |count, array|
       array << start_date.beginning_of_month + count.months
     end
+
     hash = dates.each_with_object({}) do |e, h|
-      h[e] = elo_by_times.select { |et| et.date.to_time < e.to_time }.first || elo_by_times.order(date: :asc).first
-    end.to_json
+      h[Date.parse('2015-01-01')] = { elo: 1500, date: dates.first }
+      h[dates.last] = { elo: elo_by_times.order(created_at: :asc).last&.elo || 1500, date: dates.first }
+      h[e] ||= elo_by_times.where('date < ?', e).order(created_at: :asc)&.last || { elo: 1500, date: dates.first }
+    end.sort_by { |k, v| k }.to_h.to_json
   end
 
   def self.user_query(smashgg_user_id)

@@ -67,9 +67,11 @@ class Match < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
     EloRating.k_factor = 40
-    joins(:tournament).order('tournaments.date asc').where(played: false).each do |match|
-      match.adjust_elo
-      bar.increment!
+    Tournament.order('date asc').each do |tournament|
+      tournament.matches.order('ABS(round) asc').where(played: false).each do |match|
+        match.adjust_elo
+        bar.increment!
+      end
     end
     ActiveRecord::Base.logger = old_logger
   end

@@ -151,7 +151,6 @@ class Tournament < ApplicationRecord
 
           params = { smashgg_id: player['id'], name: player['gamerTag'] }
           p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
-          puts 'New result' unless Result.find_by(player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id)
           Result.find_or_create_by(
             player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
           )
@@ -241,7 +240,7 @@ class Tournament < ApplicationRecord
     ActiveRecord::Base.logger = old_logger
   end
 
-  def self.import_from_smasgg_id(smashgg_id)
+  def self.import_from_smashgg_id(smashgg_id)
     tournament = query_smash_gg(single_tournament_query(smashgg_id)).dig('data', 'tournament')
     game_id = Game.find_by(smashgg_id: 1).id
 
