@@ -20,8 +20,9 @@ class Player < ApplicationRecord
       array << start_date.beginning_of_month + count.months
     end
 
+    arr = elo_by_times.order(created_at: :desc).deep_pluck(:date, :elo, :created_at)
     hash = dates.each_with_object({}) do |e, h|
-      h[e] ||= elo_by_times.where('date < ?', e).order(created_at: :asc)&.last || { elo: 1500, date: dates.first }
+      h[e] ||= arr.select { |ebt| ebt['date'] < e }.first || { elo: 1500, date: dates.first }
     end
 
     hash[Date.parse('2015-01-01')] = { elo: 1500, date: dates.first }
