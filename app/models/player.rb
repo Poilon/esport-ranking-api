@@ -31,19 +31,6 @@ class Player < ApplicationRecord
     hash.sort_by { |k, _| k }.to_h.to_json
   end
 
-  def self.update_elo_json
-    bar = ProgressBar.new(count)
-    old_logger = ActiveRecord::Base.logger
-    ActiveRecord::Base.logger = nil
-
-    Player.all.each do |p|
-      bar.increment!
-      p.update(elo_json: p.elo_map)
-    end
-
-    ActiveRecord::Base.logger = old_logger
-  end
-
   def self.user_query(smashgg_user_id)
     <<~STRING
       query UserQuery {

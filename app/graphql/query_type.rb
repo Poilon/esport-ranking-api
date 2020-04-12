@@ -12,6 +12,7 @@ QueryType = GraphQL::ObjectType.define do
     field resource.pluralize do
       description "Returns a #{resource.classify}"
       type !types[!"#{resource.camelize}::Type".constantize]
+      argument :active, types.Boolean
       argument :page, types.Int
       argument :per_page, types.Int
       argument :filter, types.String

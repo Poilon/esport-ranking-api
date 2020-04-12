@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_11_162643) do
+ActiveRecord::Schema.define(version: 2020_04_12_154146) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -96,7 +96,6 @@ ActiveRecord::Schema.define(version: 2020_04_11_162643) do
     t.string "discord"
     t.string "mixer"
     t.string "profile_picture_url"
-    t.string "elo_json"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
