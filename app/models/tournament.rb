@@ -7,7 +7,7 @@ class Tournament < ApplicationRecord
   def self.tournaments_total_pages
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc" }){
+        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc", filter: {afterDate: 1483225200, videogameIds: [1]} }){
           pageInfo {
             totalPages
           }
@@ -43,7 +43,7 @@ class Tournament < ApplicationRecord
   def self.query(page)
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc"}){
+        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: {afterDate: 1483225200, videogameIds: [1]}}){
           pageInfo {
             totalPages
           }
@@ -133,7 +133,9 @@ class Tournament < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
 
-    tournament_ids = Tournament.where(processed: false).pluck(:smashgg_id)
+    tournament_ids = Tournament.where(processed: false).pluck(:smashgg_id) - Tournament.where(processed: false).joins(:results).pluck(:smashgg_id)
+    tournament_ids.uniq!
+    puts tournament_ids.count
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_id|
@@ -281,8 +283,8 @@ class Tournament < ApplicationRecord
       bar.increment!
       sleep(1)
       tournaments = query_smash_gg(query(i + 1)).dig('data', 'tournaments', 'nodes') || []
-
       tournaments.each do |tournament|
+
         (tournament['events'] || []).each do |event|
 
           next if event['type'] != 1
@@ -299,6 +301,7 @@ class Tournament < ApplicationRecord
           if (t = Tournament.find_by(smashgg_id: event['id']))
             t.update(params)
           else
+            puts "NEW TOURNAMENT => #{params[:name]}"
             Tournament.create({ smashgg_id: event['id'] }.merge(params))
           end
         end

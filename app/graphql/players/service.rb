@@ -2,8 +2,15 @@ module Players
   class Service < ApplicationService
 
     def index
+      collection =
+        if params[:active]
+          Player.joins(:elo_by_times).where('elo_by_times.date > ?', 6.months.ago).distinct
+        else
+          Player.all
+        end
+
       Graphql::HydrateQuery.new(
-        params[:active] ? Player.joins(:elo_by_times).where('elo_by_times.date > ?', 1.year.ago).distinct : Player.all,
+        collection,
         @context,
         order_by: params[:order_by],
         filter: params[:filter],
