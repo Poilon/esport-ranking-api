@@ -64,10 +64,11 @@ class Match < ApplicationRecord
 
   def self.run
     bar = ProgressBar.new(where(played: false).count)
+
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
     EloRating.k_factor = 40
-    Tournament.order('date asc').each do |tournament|
+    Tournament.joins(:matches).where(matches: { played: false }).order('date asc').each do |tournament|
       tournament.matches.order('ABS(round) asc').where(played: false).each do |match|
         match.adjust_elo
         bar.increment!

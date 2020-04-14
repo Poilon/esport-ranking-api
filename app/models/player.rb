@@ -31,6 +31,13 @@ class Player < ApplicationRecord
     hash.sort_by { |k, _| k }.to_h.to_json
   end
 
+  def self.merge_in(id_in, id_to_destroy)
+    Player.find(id_to_destroy).winning_matches.update_all(winner_player_id: id_in)
+    Player.find(id_to_destroy).losing_matches.update_all(loser_player_id: id_in)
+    Player.find(id_to_destroy).results.update_all(player_id: id_in)
+    Player.find(id_to_destroy).destroy
+  end
+
   def self.user_query(smashgg_user_id)
     <<~STRING
       query UserQuery {
