@@ -4,10 +4,10 @@ class Tournament < ApplicationRecord
   has_many :results
   belongs_to :game
 
-  def self.tournaments_total_pages
+  def self.tournaments_total_pages(time=1483225200)
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc", filter: {afterDate: 1483225200, videogameIds: [1]} }){
+        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc", filter: {afterDate: #{time}, videogameIds: [1]} }){
           pageInfo {
             totalPages
           }
@@ -40,10 +40,10 @@ class Tournament < ApplicationRecord
     STRING
   end
 
-  def self.query(page)
+  def self.query(page, time=1483225200)
     <<~STRING
       query TournamentsQuery {
-        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: {afterDate: 1483225200, videogameIds: [1]}}){
+        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: {afterDate: #{time}, videogameIds: [1]}}){
           pageInfo {
             totalPages
           }
@@ -129,36 +129,54 @@ class Tournament < ApplicationRecord
     STRING
   end
 
+  def self.import_year_by_year
+    (2015..Time.now.year).each do |year|
+      import_from_smashgg(Date.parse("#{year}-01-01").to_time.to_i)
+    end
+  end
+
   def self.import_tournament_results
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
 
-    tournament_ids = Tournament.where(processed: false).pluck(:smashgg_id) - Tournament.where(processed: false).joins(:results).pluck(:smashgg_id)
+    tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).pluck(:smashgg_id)
     tournament_ids.uniq!
-    puts tournament_ids.count
-    bar = ProgressBar.new(tournament_ids.count)
-
+    count = tournament_ids.count
+    bar = ProgressBar.new(count)
     tournament_ids.each do |smashgg_id|
-      event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
+      bar.increment!
+
+      sleep(1)
+      begin
+        event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
+      rescue 
+        puts "Retrying..."
+        retry
+      end
+  
       Tournament.find_by(smashgg_id: smashgg_id).update(processed: true)
       next if !event || event.dig('state') != 'COMPLETED'
 
       pages_count = event.dig('standings', 'pageInfo', 'totalPages') || 0
       pages_count.times do |page|
-
-        standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes') || []
+        begin
+          standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes') || []
+        rescue
+          puts "Retrying..."
+          retry
+        end
         standings.each do |s|
           player = s.dig('entrant', 'participants')&.first&.try(:[], 'player')
           next unless player
 
           params = { smashgg_id: player['id'], name: player['gamerTag'] }
           p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
+          puts "new result"
           Result.find_or_create_by(
             player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
           )
         end
       end
-      bar.increment!
     end
 
     ActiveRecord::Base.logger = old_logger
@@ -269,20 +287,26 @@ class Tournament < ApplicationRecord
     end
   end
 
-  def self.import_from_smashgg
+  def self.import_from_smashgg(time = 1483225200)
     game_id = Game.find_by(smashgg_id: 1).id
-
-    pages_number = query_smash_gg(
-      tournaments_total_pages
-    ).dig('data', 'tournaments', 'pageInfo', 'totalPages')
-
+    begin
+      pages_number = query_smash_gg(tournaments_total_pages(time)).dig('data', 'tournaments', 'pageInfo', 'totalPages')
+    rescue e
+      binding.pry
+      retry
+    end
     old_logger = ActiveRecord::Base.logger
     bar = ProgressBar.new(pages_number)
     ActiveRecord::Base.logger = nil
     pages_number.times do |i|
       bar.increment!
       sleep(1)
-      tournaments = query_smash_gg(query(i + 1)).dig('data', 'tournaments', 'nodes') || []
+      begin
+        tournaments = query_smash_gg(query(i + 1, time)).dig('data', 'tournaments', 'nodes') || []
+      rescue e
+        binding.pry
+        retry
+      end
       tournaments.each do |tournament|
 
         (tournament['events'] || []).each do |event|

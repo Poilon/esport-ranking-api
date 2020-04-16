@@ -1,6 +1,7 @@
 Matches::Type = GraphQL::ObjectType.define do
   name 'Match'
   field :id, !types.String
+  field :date, types.String
   field :round, types.Int
   field :elo_by_time_ids, types[types.String] do
     resolve CollectionIdsResolver

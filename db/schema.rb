@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_12_154146) do
+ActiveRecord::Schema.define(version: 2020_04_15_194958) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -55,6 +55,7 @@ ActiveRecord::Schema.define(version: 2020_04_12_154146) do
     t.string "full_round_text"
     t.string "display_score"
     t.integer "round"
+    t.datetime "date"
   end
 
   create_table "player_characters", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

@@ -1,6 +1,7 @@
 Matches::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'MatchInputType'
   description 'Properties for updating a Match'
+  argument :date, types.String
   argument :round, types.Int
   argument :elo_by_time_ids, types[types.String]
   argument :is_loser_bracket, types.Boolean

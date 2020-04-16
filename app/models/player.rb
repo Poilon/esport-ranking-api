@@ -9,6 +9,10 @@ class Player < ApplicationRecord
   has_many :winning_matches, class_name: 'Match', foreign_key: 'winner_player_id'
   has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id'
 
+  def rank
+    Player.order(elo: :desc).pluck(:id).index(id)
+  end
+
   def elo_map
     return [] unless elo_by_times.order('date asc').first
 

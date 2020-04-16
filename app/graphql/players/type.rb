@@ -11,6 +11,10 @@ Players::Type = GraphQL::ObjectType.define do
   field :elo_map, types.String do
     resolve ->(obj, _, _) { Player.find(obj.id).elo_map }
   end
+  field :rank, types.Int do
+    resolve ->(obj, _, _) { Player.find(obj.id).rank }
+  end
+
   field :profile_picture_url, types.String
   field :twitch, types.String
   field :steam, types.String

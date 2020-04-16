@@ -88,9 +88,9 @@ class Match < ApplicationRecord
 
     new_ratings = m.updated_ratings
     loser.update_attribute(:elo, new_ratings[0])
-    EloByTime.create(player_id: loser.id, elo: new_ratings[0], date: tournament.date, match_id: id)
+    EloByTime.create(player_id: loser_player_id, elo: new_ratings[0], date: date, match_id: id)
     winner.update_attribute(:elo, new_ratings[1])
-    EloByTime.create(player_id: winner.id, elo: new_ratings[1], date: tournament.date, match_id: id)
+    EloByTime.create(player_id: winner_player_id, elo: new_ratings[1], date: date, match_id: id)
 
     update_attribute(:played, true)
   end
@@ -98,24 +98,37 @@ class Match < ApplicationRecord
   def self.import_all_matches
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
-    tournament_ids = Tournament.where(imported_matches: false).joins(:results).pluck(:smashgg_id).uniq
+    tournament_ids = Tournament.where(imported_matches: false).order('date asc').joins(:results).pluck(:smashgg_id).uniq
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_event_id|
+      bar.increment!
       import_matches_of_tournament_from_smashgg(smashgg_event_id)
       Tournament.find_by(smashgg_id: smashgg_event_id)&.update(imported_matches: true)
-      bar.increment!
     end
 
     ActiveRecord::Base.logger = old_logger
   end
 
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
-    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
+    sleep(1)
+    begin
+      total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
+    rescue
+      puts 'retry...'
+      retry
+    end
+    puts "#{total_pages.to_i * 80} matches to import for #{smashgg_event_id} "
 
     (total_pages || 0).times do |page|
       sleep(1)
-      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 80)).dig('data', 'event', 'sets', 'nodes') || []
+      begin
+        matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 80)).dig('data', 'event', 'sets', 'nodes') || []
+      rescue
+        puts 'retry...'
+        retry
+      end
+      print '.'
       matchs.each do |m|
         next if m['displayScore'] == 'DQ'
 
@@ -142,11 +155,13 @@ class Match < ApplicationRecord
         loser = Player.find_by(smashgg_id: loser_player.dig('player', 'id'))
         loser ? loser.update(loser_params) : loser = Player.create(loser_params)
 
+        tournament = Tournament.find_by(smashgg_id: smashgg_event_id)
+
         params = {
-          smashgg_id: m['id'], tournament_id: Tournament.find_by(smashgg_id: smashgg_event_id)&.id,
+          smashgg_id: m['id'], tournament_id: tournament&.id,
           winner_player_id: winner.id, loser_player_id: loser.id, vod_url: m['vod_url'],
           is_loser_bracket: m['round']&.negative?, display_score: m['displayScore'], full_round_text: m['fullRoundText'],
-          round: m['round']
+          round: m['round'], date: tournament&.date
 
         }
         db_match = Match.find_by(smashgg_id: m['id'])
