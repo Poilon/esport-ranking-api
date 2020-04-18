@@ -14,7 +14,7 @@ class Player < ApplicationRecord
   end
 
   def elo_map
-    return [] unless elo_by_times.order('date asc').first
+    return {}.to_json unless elo_by_times.order('date asc').first
 
     start_date = Date.parse('2015-01-01')
     end_date = Date.today
