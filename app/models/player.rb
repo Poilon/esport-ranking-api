@@ -10,7 +10,7 @@ class Player < ApplicationRecord
   has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id'
 
   def rank
-    Player.order(elo: :desc).pluck(:id).index(id)
+    Player.order(elo: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def elo_map
