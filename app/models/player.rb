@@ -1,13 +1,13 @@
 class Player < ApplicationRecord
 
-  has_many :elo_by_times
-  has_many :player_characters
+  has_many :elo_by_times, dependent: :destroy
+  has_many :player_characters, dependent: :destroy
   has_many :characters, through: :player_characters
-  has_many :results
-  has_many :player_teams
+  has_many :results, dependent: :destroy
+  has_many :player_teams, dependent: :destroy
   has_many :teams, through: :player_teams
-  has_many :winning_matches, class_name: 'Match', foreign_key: 'winner_player_id'
-  has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id'
+  has_many :winning_matches, class_name: 'Match', foreign_key: 'winner_player_id', dependent: :destroy
+  has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id', dependent: :destroy
 
   def rank
     Player.order(elo: :desc).pluck(:id).index(id).to_i + 1
@@ -33,6 +33,24 @@ class Player < ApplicationRecord
     hash[dates.last] = { elo: elo_by_times.order(created_at: :asc).last&.elo || 1500, date: dates.first }
 
     hash.sort_by { |k, _| k }.to_h.to_json
+  end
+
+  def self.find_doublons
+
+    Player.order(elo: :desc).first(300).each do |p|
+
+      Player.where('name like ?', "%#{p.name}%").each do |other_p|
+        next if other_p.id == p.id
+
+        puts "#{other_p.name} elo: #{other_p.elo} matches #{other_p.winning_matches.count} results #{other_p.results.count} best_win => #{other_p.best_win&.loser&.name} best_result => #{other_p.results.order(rank: :asc).first&.rank} @ #{other_p.results.order(rank: :asc).first&.tournament&.name}"
+        puts "#{p.name} <= #{other_p.name}"
+
+        input = gets
+        self.merge_in(p.id, other_p.id) if input.strip == 'yes'
+        other_p.destroy if input.strip == 'destroy'
+        break if input.strip == 'skip' || input.strip == 's'
+      end
+    end
   end
 
   def self.merge_in(id_in, id_to_destroy)

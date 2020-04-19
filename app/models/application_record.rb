@@ -23,6 +23,13 @@ class ApplicationRecord < ActiveRecord::Base
     end
   end
 
+  def self.without_logs
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+    yield
+    ActiveRecord::Base.logger = old_logger
+  end
+
   def self.query_smash_gg(query)
     HTTParty.post(
       'https://api.smash.gg/gql/alpha',

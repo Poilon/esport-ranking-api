@@ -1,7 +1,7 @@
 class Tournament < ApplicationRecord
 
-  has_many :matches
-  has_many :results
+  has_many :matches, dependent: :destroy
+  has_many :results, dependent: :destroy
   belongs_to :game
 
   def self.tournaments_total_pages(time=1483225200)
