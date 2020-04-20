@@ -60,6 +60,13 @@ class Player < ApplicationRecord
     Player.find(id_to_destroy).destroy
   end
 
+
+  def self.merge_in_array(id_in, arr)
+    arr.each do |id_to_destroy|
+      merge_in(id_in, id_to_destroy)
+    end
+  end
+
   def self.user_query(smashgg_user_id)
     <<~STRING
       query UserQuery {
