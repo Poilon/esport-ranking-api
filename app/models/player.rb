@@ -35,8 +35,24 @@ class Player < ApplicationRecord
     hash.sort_by { |k, _| k }.to_h.to_json
   end
 
-  def self.find_doublons
+  def self.undouble_players
+    without_logs do
+      where('smashgg_user_id is not null').order(elo: :desc).each do |p|
 
+        players = Player.where(smashgg_user_id: p.smashgg_user_id)
+        next if players.count == 1
+        puts "#{p.name} - #{players.count}"
+
+        players.each do |pp|
+          next if pp.id == p.id
+          merge_in(p.id, pp.id)
+        end
+        hydrate_player_info(p)
+      end
+    end
+  end
+
+  def self.find_doublons
     Player.order(elo: :desc).first(300).each do |p|
 
       Player.where('name like ?', "%#{p.name}%").each do |other_p|
@@ -111,48 +127,52 @@ class Player < ApplicationRecord
     losing_matches.joins(:winner).order('players.elo asc').first
   end
 
+  def self.hydrate_player_info(player)
+    smashgg_user_id = player.smashgg_user_id
+    sleep(1)
+    smashgg_user = query_smash_gg(user_query(smashgg_user_id))
+    params = {
+      current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
+        r['title'] != 'MPGR: 2019 MPGR'
+      end.try(:[], 0).try(:[], 'rank'),
+      country: smashgg_user.dig('data', 'user', 'location', 'country'),
+      state: smashgg_user.dig('data', 'user', 'location', 'state'),
+      city: smashgg_user.dig('data', 'user', 'location', 'city'),
+      profile_picture_url: smashgg_user.dig('data', 'user', 'images')&.reject do |i|
+        i['type'] != 'profile'
+      end.try(:[], 0).try(:[], 'url'),
+      twitter: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
+        i['type'] != 'TWITTER'
+      end.try(:[], 0).try(:[], 'url'),
+      twitch: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
+        i['type'] != 'TWITCH'
+      end.try(:[], 0).try(:[], 'url'),
+      mixer: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
+        i['type'] != 'MIXER'
+      end.try(:[], 0).try(:[], 'url'),
+      discord: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
+        i['type'] != 'DISCORD'
+      end.try(:[], 0).try(:[], 'externalUsername'),
+      steam: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
+        i['type'] != 'STEAM'
+      end.try(:[], 0).try(:[], 'externalUsername')
+    }.reject { |_, v| v.blank? }
+
+    player.update(params)
+  end
+
   def self.hydrate_players_info
     players = Player.where('smashgg_user_id is not null and country is null').order(elo: :desc)
 
     bar = ProgressBar.new(players.count)
-    old_logger = ActiveRecord::Base.logger
-    ActiveRecord::Base.logger = nil
 
-    players.each do |player|
-      smashgg_user_id = player.smashgg_user_id
-      sleep(1)
-      smashgg_user = query_smash_gg(user_query(smashgg_user_id))
-      params = {
-        current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
-          r['title'] != 'MPGR: 2019 MPGR'
-        end.try(:[], 0).try(:[], 'rank'),
-        country: smashgg_user.dig('data', 'user', 'location', 'country'),
-        state: smashgg_user.dig('data', 'user', 'location', 'state'),
-        city: smashgg_user.dig('data', 'user', 'location', 'city'),
-        profile_picture_url: smashgg_user.dig('data', 'user', 'images')&.reject do |i|
-          i['type'] != 'profile'
-        end.try(:[], 0).try(:[], 'url'),
-        twitter: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
-          i['type'] != 'TWITTER'
-        end.try(:[], 0).try(:[], 'url'),
-        twitch: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
-          i['type'] != 'TWITCH'
-        end.try(:[], 0).try(:[], 'url'),
-        mixer: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
-          i['type'] != 'MIXER'
-        end.try(:[], 0).try(:[], 'url'),
-        discord: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
-          i['type'] != 'DISCORD'
-        end.try(:[], 0).try(:[], 'externalUsername'),
-        steam: smashgg_user.dig('data', 'user', 'authorizations')&.reject do |i|
-          i['type'] != 'STEAM'
-        end.try(:[], 0).try(:[], 'externalUsername')
-      }.reject { |_, v| v.blank? }
-
-      player.update(params)
-      bar.increment!
+    without_logs do
+      players.each do |player|
+        bar.increment!
+        hydrate_player_info(player)
+      end
     end
-    ActiveRecord::Base.logger = old_logger
+
   end
 
 end
