@@ -4,7 +4,7 @@ module Players
     def index
       collection =
         if params[:active]
-          Player.joins(:elo_by_times).where('elo_by_times.date > ?', 6.months.ago).distinct
+          Player.joins(:elo_by_times).where('elo_by_times.date > ?', 1.year.ago).distinct
         else
           Player.all
         end
