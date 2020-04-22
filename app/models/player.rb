@@ -14,15 +14,25 @@ class Player < ApplicationRecord
   end
 
   def country_rank
-    nil unless country
+    return nil unless country
 
     Player.where(country: country).order(elo: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def state_rank
-    nil if !state || !country
+    return nil if !state || !country
 
     Player.where(country: country, state: state).order(elo: :desc).pluck(:id).index(id).to_i + 1
+  end
+
+  def city_rank
+    return nil if !country || !city
+
+    if state
+      Player.where(country: country, state: state, city: city).order(elo: :desc).pluck(:id).index(id).to_i + 1
+    else
+      Player.where(country: country, city: city).order(elo: :desc).pluck(:id).index(id).to_i + 1
+    end
   end
 
   def elo_map
