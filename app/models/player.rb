@@ -41,13 +41,21 @@ class Player < ApplicationRecord
 
         players = Player.where(smashgg_user_id: p.smashgg_user_id)
         next if players.count == 1
+
         puts "#{p.name} - #{players.count}"
 
         players.each do |pp|
           next if pp.id == p.id
+
           merge_in(p.id, pp.id)
         end
-        hydrate_player_info(p)
+
+        begin
+          hydrate_player_info(p)
+        rescue
+          puts 'retry...'
+          retry
+        end
       end
     end
   end
