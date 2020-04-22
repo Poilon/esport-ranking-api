@@ -149,11 +149,11 @@ class Tournament < ApplicationRecord
       sleep(1)
       begin
         event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
-      rescue 
+      rescue
         puts "Retrying..."
         retry
       end
-  
+
       Tournament.find_by(smashgg_id: smashgg_id).update(processed: true)
       next if !event || event.dig('state') != 'COMPLETED'
 

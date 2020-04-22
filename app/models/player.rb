@@ -13,6 +13,18 @@ class Player < ApplicationRecord
     Player.order(elo: :desc).pluck(:id).index(id).to_i + 1
   end
 
+  def country_rank
+    nil unless country
+
+    Player.where(country: country).order(elo: :desc).pluck(:id).index(id).to_i + 1
+  end
+
+  def state_rank
+    nil if !state || !country
+
+    Player.where(country: country, state: state).order(elo: :desc).pluck(:id).index(id).to_i + 1
+  end
+
   def elo_map
     return {}.to_json unless elo_by_times.order('date asc').first
 
@@ -170,17 +182,21 @@ class Player < ApplicationRecord
   end
 
   def self.hydrate_players_info
-    players = Player.where('smashgg_user_id is not null and country is null').order(elo: :desc)
+    players = Player.where('smashgg_user_id is not null and country is null and profile_picture_url is null').order(elo: :desc)
 
     bar = ProgressBar.new(players.count)
 
     without_logs do
       players.each do |player|
         bar.increment!
-        hydrate_player_info(player)
+        begin
+          hydrate_player_info(player)
+        rescue
+          puts 'retry...'
+          retry
+        end
       end
     end
-
   end
 
 end
