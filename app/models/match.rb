@@ -66,20 +66,16 @@ class Match < ApplicationRecord
     items = Tournament.joins(:matches).where(matches: { played: false }).order('date asc').distinct
     bar = ProgressBar.new(items.count)
 
-    old_logger = ActiveRecord::Base.logger
-    ActiveRecord::Base.logger = nil
-    EloRating.k_factor = 40
-    items.each do |tournament|
-      bar.increment!
-      adjust_elo_of_tournament(tournament)
+    without_logs do
+      items.each do |tournament|
+        bar.increment!
+        adjust_elo_of_tournament(tournament)
+      end
     end
-    ActiveRecord::Base.logger = old_logger
   end
 
   def self.adjust_elo_of_tournament(tournament)
-    tournament.matches.order('ABS(round) asc').where(played: false).each do |match|
-      match.adjust_elo
-    end
+    tournament.matches.order('ABS(round) asc').where(played: false).each(&:adjust_elo)
   end
 
   def adjust_elo
@@ -93,9 +89,9 @@ class Match < ApplicationRecord
 
     new_ratings = m.updated_ratings
     loser.update_attribute(:elo, new_ratings[0])
-    EloByTime.create(player_id: loser_player_id, elo: new_ratings[0], date: date, match_id: id)
+    loser.elo_by_times.create(elo: new_ratings[0], date: date, match_id: id, order: loser.elo_by_times.count)
     winner.update_attribute(:elo, new_ratings[1])
-    EloByTime.create(player_id: winner_player_id, elo: new_ratings[1], date: date, match_id: id)
+    winner.elo_by_times.create(elo: new_ratings[1], date: date, match_id: id, order: winner.elo_by_times.count)
 
     update_attribute(:played, true)
   end

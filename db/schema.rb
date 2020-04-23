@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_15_194958) do
+ActiveRecord::Schema.define(version: 2020_04_23_081959) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -32,6 +32,7 @@ ActiveRecord::Schema.define(version: 2020_04_15_194958) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "match_id"
+    t.integer "order"
   end
 
   create_table "games", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -97,6 +98,7 @@ ActiveRecord::Schema.define(version: 2020_04_15_194958) do
     t.string "discord"
     t.string "mixer"
     t.string "profile_picture_url"
+    t.boolean "hide"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

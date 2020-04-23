@@ -21,4 +21,5 @@ Tournaments::Type = GraphQL::ObjectType.define do
   field :weight, types.Int
   field :game_id, types.String
   field :game, Games::Type
+
 end

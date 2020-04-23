@@ -157,6 +157,15 @@ class Player < ApplicationRecord
     losing_matches.joins(:winner).order('players.elo asc').first
   end
 
+  def elo_diffs
+    elo_by_times.deep_pluck(:order, :elo, match: { tournament: :id }).group_by do |e|
+      e[:match][:tournament]['id']
+    end.each_with_object({}) do |(k, v), h|
+      sorted = v&.sort_by { |key, _| key['order'] }
+      h[k] = sorted&.last.try(:[], 'elo').to_i - sorted&.first.try(:[], 'elo').to_i
+    end
+  end
+
   def self.hydrate_player_info(player)
     smashgg_user_id = player.smashgg_user_id
     sleep(1)

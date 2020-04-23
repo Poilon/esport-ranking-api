@@ -171,7 +171,6 @@ class Tournament < ApplicationRecord
 
           params = { smashgg_id: player['id'], name: player['gamerTag'] }
           p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
-          puts "new result"
           Result.find_or_create_by(
             player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
           )
