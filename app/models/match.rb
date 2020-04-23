@@ -89,9 +89,9 @@ class Match < ApplicationRecord
 
     new_ratings = m.updated_ratings
     loser.update_attribute(:elo, new_ratings[0])
-    loser.elo_by_times.create(elo: new_ratings[0], date: date, match_id: id, order: loser.elo_by_times.count)
+    loser.elo_by_times.create(elo: new_ratings[0], date: date, match_id: id)
     winner.update_attribute(:elo, new_ratings[1])
-    winner.elo_by_times.create(elo: new_ratings[1], date: date, match_id: id, order: winner.elo_by_times.count)
+    winner.elo_by_times.create(elo: new_ratings[1], date: date, match_id: id)
 
     update_attribute(:played, true)
   end

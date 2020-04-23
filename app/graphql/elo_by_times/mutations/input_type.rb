@@ -1,7 +1,6 @@
 EloByTimes::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'EloByTimeInputType'
   description 'Properties for updating a EloByTime'
-  argument :order, types.Int
   argument :match_id, types.String
 
   argument :date, types.String
