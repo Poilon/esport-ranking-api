@@ -5,57 +5,6 @@ class Match < ApplicationRecord
   belongs_to :winner, class_name: 'Player', foreign_key: 'winner_player_id'
   belongs_to :loser, class_name: 'Player', foreign_key: 'loser_player_id'
 
-  def self.matchs_total_pages(id, per_page)
-    <<~STRING
-      query MatchesTotalPagesQuery {
-        event(id: #{id}) {
-          sets(page: 1, perPage: #{per_page}) {
-            pageInfo {
-              totalPages
-            }
-          }
-        }
-      }
-    STRING
-  end
-
-  def self.matchs_query(id, page, per_page)
-    <<~STRING
-      query MatchesQuery {
-        event(id: #{id}) {
-          sets(page: #{page}, perPage: #{per_page}) {
-            pageInfo {
-              totalPages
-            }
-            nodes {
-              id
-              completedAt
-              winnerId
-              vodUrl
-              round
-              fullRoundText
-              displayScore
-              slots {
-                entrant {
-                  id
-                  participants {
-                    user {
-                      id
-                    }
-                    player {
-                      id
-                      gamerTag
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    STRING
-  end
-
   def self.reset!
     Match.update_all(played: false)
     Player.update_all(elo: 1500)
@@ -69,16 +18,16 @@ class Match < ApplicationRecord
     without_logs do
       items.each do |tournament|
         bar.increment!
-        adjust_elo_of_tournament(tournament)
+        play_matches_of_tournament(tournament)
       end
     end
   end
 
-  def self.adjust_elo_of_tournament(tournament)
-    tournament.matches.order('ABS(round) asc').where(played: false).each(&:adjust_elo)
+  def self.play_matches_of_tournament(tournament)
+    tournament.matches.order('ABS(round) asc').where(played: false).each(&:play_match)
   end
 
-  def adjust_elo
+  def play_match
     return if played == true
 
     EloRating.k_factor = is_loser_bracket ? 20 : 40
@@ -114,7 +63,9 @@ class Match < ApplicationRecord
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
     sleep(1)
     begin
-      total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig('data', 'event', 'sets', 'pageInfo', 'totalPages')
+      total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig(
+        'data', 'event', 'sets', 'pageInfo', 'totalPages'
+      )
     rescue
       puts 'retry...'
       retry
@@ -169,6 +120,57 @@ class Match < ApplicationRecord
         db_match ? db_match.update(params) : Match.create(params)
       end
     end
+  end
+
+  def self.matchs_total_pages(id, per_page)
+    <<~STRING
+      query MatchesTotalPagesQuery {
+        event(id: #{id}) {
+          sets(page: 1, perPage: #{per_page}) {
+            pageInfo {
+              totalPages
+            }
+          }
+        }
+      }
+    STRING
+  end
+
+  def self.matchs_query(id, page, per_page)
+    <<~STRING
+      query MatchesQuery {
+        event(id: #{id}) {
+          sets(page: #{page}, perPage: #{per_page}) {
+            pageInfo {
+              totalPages
+            }
+            nodes {
+              id
+              completedAt
+              winnerId
+              vodUrl
+              round
+              fullRoundText
+              displayScore
+              slots {
+                entrant {
+                  id
+                  participants {
+                    user {
+                      id
+                    }
+                    player {
+                      id
+                      gamerTag
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    STRING
   end
 
 end

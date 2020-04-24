@@ -4,131 +4,6 @@ class Tournament < ApplicationRecord
   has_many :results, dependent: :destroy
   belongs_to :game
 
-  def self.tournaments_total_pages(time=1483225200)
-    <<~STRING
-      query TournamentsQuery {
-        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc", filter: {afterDate: #{time}, videogameIds: [1]} }){
-          pageInfo {
-            totalPages
-          }
-        }
-      }
-    STRING
-  end
-
-  def self.single_tournament_query(tournament_id)
-    <<~STRING
-      query SingleTournamentQuery {
-        tournament(id: "#{tournament_id}") {
-          id
-          name
-          endAt
-          events {
-            state
-            id
-            isOnline
-            name
-            slug
-            type
-            videogame {
-              id
-              name
-            }
-          }
-        }
-      }
-    STRING
-  end
-
-  def self.query(page, time=1483225200)
-    <<~STRING
-      query TournamentsQuery {
-        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: {afterDate: #{time}, videogameIds: [1]}}){
-          pageInfo {
-            totalPages
-          }
-          nodes {
-            id
-            name
-            endAt
-            events {
-              state
-              id
-              isOnline
-              name
-              slug
-              type
-              videogame {
-                id
-                name
-              }
-            }
-          }
-        }
-      }
-    STRING
-  end
-
-  def self.result_query(id, page)
-    <<~STRING
-      query EventQuery {
-        event(id: #{id}) {
-          state
-          standings(query: {page: #{page}, perPage: 100}) {
-            pageInfo {
-              totalPages
-            }
-            nodes {
-              placement
-              entrant {
-                participants {
-                  player {
-                    id
-                    prefix
-                    gamerTag
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    STRING
-  end
-
-  def self.result_query_with_phases(id, page)
-    <<~STRING
-      query EventQuery {
-        event(id: #{id}) {
-          phaseGroups {
-            state
-            phase {
-              bracketType
-              name
-            }
-            standings(query: {page: #{page}, perPage: 10}) {
-              pageInfo {
-                totalPages
-              }
-              nodes {
-                placement
-                entrant {
-                  participants {
-                    player {
-                      id
-                      prefix
-                      gamerTag
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    STRING
-  end
-
   def self.import_year_by_year
     (2015..Time.now.year).each do |year|
       import_from_smashgg(Date.parse("#{year}-01-01").to_time.to_i)
@@ -291,7 +166,6 @@ class Tournament < ApplicationRecord
     begin
       pages_number = query_smash_gg(tournaments_total_pages(time)).dig('data', 'tournaments', 'pageInfo', 'totalPages')
     rescue e
-      binding.pry
       retry
     end
     old_logger = ActiveRecord::Base.logger
@@ -331,6 +205,131 @@ class Tournament < ApplicationRecord
       end
     end
     ActiveRecord::Base.logger = old_logger
+  end
+
+  def self.tournaments_total_pages(time=1483225200)
+    <<~STRING
+      query TournamentsQuery {
+        tournaments(query: { page: 1, perPage: 75, sortBy: "endAt asc", filter: {afterDate: #{time}, videogameIds: [1]} }){
+          pageInfo {
+            totalPages
+          }
+        }
+      }
+    STRING
+  end
+
+  def self.single_tournament_query(tournament_id)
+    <<~STRING
+      query SingleTournamentQuery {
+        tournament(id: "#{tournament_id}") {
+          id
+          name
+          endAt
+          events {
+            state
+            id
+            isOnline
+            name
+            slug
+            type
+            videogame {
+              id
+              name
+            }
+          }
+        }
+      }
+    STRING
+  end
+
+  def self.query(page, time=1483225200)
+    <<~STRING
+      query TournamentsQuery {
+        tournaments(query: {page: #{page}, perPage: 75, sortBy: "endAt asc", filter: {afterDate: #{time}, videogameIds: [1]}}){
+          pageInfo {
+            totalPages
+          }
+          nodes {
+            id
+            name
+            endAt
+            events {
+              state
+              id
+              isOnline
+              name
+              slug
+              type
+              videogame {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    STRING
+  end
+
+  def self.result_query(id, page)
+    <<~STRING
+      query EventQuery {
+        event(id: #{id}) {
+          state
+          standings(query: {page: #{page}, perPage: 100}) {
+            pageInfo {
+              totalPages
+            }
+            nodes {
+              placement
+              entrant {
+                participants {
+                  player {
+                    id
+                    prefix
+                    gamerTag
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    STRING
+  end
+
+  def self.result_query_with_phases(id, page)
+    <<~STRING
+      query EventQuery {
+        event(id: #{id}) {
+          phaseGroups {
+            state
+            phase {
+              bracketType
+              name
+            }
+            standings(query: {page: #{page}, perPage: 10}) {
+              pageInfo {
+                totalPages
+              }
+              nodes {
+                placement
+                entrant {
+                  participants {
+                    player {
+                      id
+                      prefix
+                      gamerTag
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    STRING
   end
 
 end
