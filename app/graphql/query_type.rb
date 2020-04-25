@@ -23,16 +23,24 @@ QueryType = GraphQL::ObjectType.define do
   end
 
   field :countries, types[types.String] do
-    resolve ->(_, _, _) { Player.pluck(:country).uniq.compact.sort }
+    resolve lambda { |_, _, _|
+      ['Europe'] + ['United States'] + (Player.pluck(:country).uniq.compact.sort.reject { |e| e == 'United States' })
+    }
   end
   field :states, types[types.String] do
-    argument :country, types.String
-    resolve ->(_, args, _) { Player.where(country: args[:country]).pluck(:state).uniq.compact.sort }
+    argument :countries, types.String
+    resolve ->(_, args, _) { Player.where(country: args[:countries].split(',')).pluck(:state).uniq.compact.sort }
   end
   field :cities, types[types.String] do
-    argument :country, types.String
-    argument :state, types.String
-    resolve ->(_, args, _) { Player.where(country: args[:country], state: args[:state]).pluck(:city).uniq.compact.sort }
+    argument :countries, types.String
+    argument :states, types.String
+    resolve lambda { |_, args, _|
+      if args[:states]
+        Player.where(country: args[:countries].split(','), state: args[:states].split(',')).pluck(:city).uniq.compact.sort
+      else
+        Player.where(country: args[:countries].split(',')).pluck(:city).uniq.compact.sort
+      end
+    }
   end
 
   field :me, Users::Type do
