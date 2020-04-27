@@ -29,6 +29,11 @@ Players::Type = GraphQL::ObjectType.define do
     resolve ->(obj, _, _) { Player.find(obj.id).tournaments_diffs }
   end
 
+  field :character_ids, types[types.String] do
+    resolve CollectionIdsResolver
+  end
+  field :characters, types[Characters::Type]
+
   field :profile_picture_url, types.String
   field :twitch, types.String
   field :steam, types.String

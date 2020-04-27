@@ -12,7 +12,6 @@ QueryType = GraphQL::ObjectType.define do
     field resource.pluralize do
       description "Returns a #{resource.classify}"
       type !types[!"#{resource.camelize}::Type".constantize]
-      argument :active, types.Boolean
       argument :page, types.Int
       argument :per_page, types.Int
       argument :filter, types.String
@@ -20,6 +19,16 @@ QueryType = GraphQL::ObjectType.define do
       resolve ApplicationService.call(resource, :index)
     end
 
+  end
+
+  field :players, types[Players::Type] do
+    argument :active, types.Boolean
+    argument :page, types.Int
+    argument :per_page, types.Int
+    argument :filter, types.String
+    argument :order_by, types.String
+    argument :characters, types.String
+    resolve ApplicationService.call(:players, :index)
   end
 
   field :countries, types[types.String] do

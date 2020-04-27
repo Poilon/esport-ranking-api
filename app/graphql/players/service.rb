@@ -9,6 +9,10 @@ module Players
           Player.all
         end
 
+      if params[:characters]
+        collection = collection.joins(:characters).where(characters: { name: params[:characters].split(',') }).distinct
+      end
+
       Graphql::HydrateQuery.new(
         collection,
         @context,
