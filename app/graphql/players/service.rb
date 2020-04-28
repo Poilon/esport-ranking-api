@@ -24,5 +24,13 @@ module Players
       ).run.compact
     end
 
+    def update
+      if !args[:security_token] || args[:security_token].size < 31 || args[:security_token] != ENV['SECURITY_TOKEN']
+        graphql_error('Authentication Failed')
+      else
+        super
+      end
+    end
+
   end
 end

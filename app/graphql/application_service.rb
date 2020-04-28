@@ -1,10 +1,11 @@
 class ApplicationService
 
-  attr_accessor :params, :object, :fields, :user
+  attr_accessor :params, :object, :fields, :user, :args
 
-  def initialize(params: {}, object: nil, object_id: nil, user: nil, context: nil)
+  def initialize(params: {}, object: nil, object_id: nil, user: nil, context: nil, args: nil)
     @params = params.is_a?(Array) ? params.map { |p| p.to_h.symbolize_keys } : params.to_h.symbolize_keys
     @context = context
+    @args = args
     @object = object || (object_id && model.visible_for(user: user).find_by(id: object_id))
     @object_id = object_id
     @user = user
@@ -15,7 +16,7 @@ class ApplicationService
       params = args && args[resource] ? args[resource] : args
       "#{resource.to_s.pluralize.camelize.constantize}::Service".constantize.new(
         params: params, user: context[:current_user],
-        object_id: args[:id], context: context
+        object_id: args[:id], context: context, args: args
       ).send(meth)
     }
   end
