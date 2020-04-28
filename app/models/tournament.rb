@@ -14,7 +14,9 @@ class Tournament < ApplicationRecord
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
 
-    tournament_ids = Tournament.pluck(:smashgg_id) - Tournament.joins(:results).pluck(:smashgg_id)
+    tournaments = Tournament.where('date > ?', Date.parse('2020-02-02'))
+
+    tournament_ids = tournaments.pluck(:smashgg_id) - tournaments.joins(:results).pluck(:smashgg_id)
     tournament_ids.uniq!
     count = tournament_ids.count
     bar = ProgressBar.new(count)

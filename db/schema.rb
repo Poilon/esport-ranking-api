@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_23_141339) do
+ActiveRecord::Schema.define(version: 2020_04_28_093003) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -98,6 +98,7 @@ ActiveRecord::Schema.define(version: 2020_04_23_141339) do
     t.string "mixer"
     t.string "profile_picture_url"
     t.boolean "hide"
+    t.string "prefix"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

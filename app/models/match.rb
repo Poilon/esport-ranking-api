@@ -11,6 +11,12 @@ class Match < ApplicationRecord
     EloByTime.delete_all
   end
 
+  def self.reset_year(year)
+    Match.joins(:tournament).where('tournaments.date > ?', Date.parse("#{year}-01-01")).update_all(played: false)
+    EloByTime.where('date > ?', Date.parse("#{year}-01-01")).delete_all
+    Player.find_each { |p| p.update(elo: p.elo_by_times.order(date: :desc).first&.elo || 1500) }
+  end
+
   def self.run
     items = Tournament.joins(:matches).where(matches: { played: false }).order('date asc').distinct
     bar = ProgressBar.new(items.count)
@@ -48,7 +54,11 @@ class Match < ApplicationRecord
   def self.import_all_matches
     old_logger = ActiveRecord::Base.logger
     ActiveRecord::Base.logger = nil
-    tournament_ids = Tournament.where(imported_matches: false).order('date asc').joins(:results).pluck(:smashgg_id).uniq
+
+    tournament_ids = Tournament.where(
+      'date > ?', Date.parse('2020-03-01')
+    ).order('date asc').joins(:results).pluck(:smashgg_id).uniq
+
     bar = ProgressBar.new(tournament_ids.count)
 
     tournament_ids.each do |smashgg_event_id|
@@ -63,25 +73,27 @@ class Match < ApplicationRecord
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
     sleep(1)
     begin
-      total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 80)).dig(
+      total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 60)).dig(
         'data', 'event', 'sets', 'pageInfo', 'totalPages'
       )
     rescue
       puts 'retry...'
       retry
     end
-    puts "#{total_pages.to_i * 80} matches to import for #{smashgg_event_id} "
+    puts "#{total_pages.to_i * 60} matches to import for #{smashgg_event_id} "
 
     (total_pages || 0).times do |page|
       sleep(1)
       begin
-        matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 80)).dig('data', 'event', 'sets', 'nodes') || []
+        matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 60)).dig('data', 'event', 'sets', 'nodes') || []
       rescue
         puts 'retry...'
         retry
       end
       print '.'
       matchs.each do |m|
+
+
         next if m['displayScore'] == 'DQ'
 
         player_ids = m.dig('slots')&.each_with_object({}) do |s, h|
@@ -94,12 +106,12 @@ class Match < ApplicationRecord
 
         winner_params = {
           smashgg_id: winner_player.dig('player', 'id'), name: winner_player.dig('player', 'gamerTag'),
-          smashgg_user_id: winner_player.dig('user', 'id')
+          smashgg_user_id: winner_player.dig('user', 'id'), prefix: winner_player.dig('player', 'prefix')
         }
 
         loser_params = {
           smashgg_id: loser_player.dig('player', 'id'), name: loser_player.dig('player', 'gamerTag'),
-          smashgg_user_id: loser_player.dig('user', 'id')
+          smashgg_user_id: loser_player.dig('user', 'id'), prefix: winner_player.dig('player', 'prefix')
         }
         winner = Player.find_by(smashgg_id: winner_player.dig('player', 'id'))
         winner ? winner.update(winner_params) : winner = Player.create(winner_params)
@@ -162,6 +174,10 @@ class Match < ApplicationRecord
                     player {
                       id
                       gamerTag
+                      prefix
+                      user {
+                        id
+                      }
                     }
                   }
                 }

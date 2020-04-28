@@ -1,6 +1,7 @@
 Players::Mutations::InputType = GraphQL::InputObjectType.define do
   name 'PlayerInputType'
   description 'Properties for updating a Player'
+  argument :prefix, types.String
 
   argument :character_ids, types[types.String]
   argument :hide, types.Boolean

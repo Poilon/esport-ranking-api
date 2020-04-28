@@ -185,6 +185,7 @@ class Player < ApplicationRecord
     sleep(1)
     smashgg_user = query_smash_gg(user_query(smashgg_user_id))
     params = {
+      prefix: smashgg_user.dig('data', 'user', 'player', 'prefix'),
       current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
         r['title'] != 'MPGR: 2019 MPGR'
       end.try(:[], 0).try(:[], 'rank'),
@@ -215,7 +216,7 @@ class Player < ApplicationRecord
   end
 
   def self.hydrate_players_info
-    players = Player.where('smashgg_user_id is not null and country is null and profile_picture_url is null').order(elo: :desc)
+    players = Player.where('smashgg_user_id is not null').order(elo: :desc)
 
     bar = ProgressBar.new(players.count)
 
