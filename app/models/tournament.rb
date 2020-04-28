@@ -25,7 +25,7 @@ class Tournament < ApplicationRecord
       begin
         event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
       rescue
-        puts "Retrying..."
+        puts 'Retrying...'
         retry
       end
 
@@ -37,7 +37,7 @@ class Tournament < ApplicationRecord
         begin
           standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes') || []
         rescue
-          puts "Retrying..."
+          puts 'Retrying...'
           retry
         end
         standings.each do |s|
@@ -45,7 +45,10 @@ class Tournament < ApplicationRecord
           next unless player
 
           params = { smashgg_id: player['id'], name: player['gamerTag'] }
-          p = Player.find_by(smashgg_id: player['id']) || Player.create(params)
+          p = Player.find_by(smashgg_id: player['id']) ||
+            Player.find_by(smashgg_user_id: player.dig('user', 'id')) ||
+            Player.create(params)
+
           Result.find_or_create_by(
             player_id: p.id, tournament_id: Tournament.find_by(smashgg_id: smashgg_id).id, rank: s['placement']
           )
@@ -289,6 +292,9 @@ class Tournament < ApplicationRecord
                     id
                     prefix
                     gamerTag
+                    user {
+                      id
+                    }
                   }
                 }
               }
