@@ -38,4 +38,19 @@ class ApplicationRecord < ActiveRecord::Base
     )
   end
 
+  def query_smash_gg(query)
+    HTTParty.post(
+      'https://api.smash.gg/gql/alpha',
+      body: { query: query },
+      headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
+    )
+  end
+
+  def without_logs
+    old_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+    yield
+    ActiveRecord::Base.logger = old_logger
+  end
+
 end
