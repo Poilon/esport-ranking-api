@@ -87,7 +87,7 @@ class Player < ApplicationRecord
         end
 
         begin
-          hydrate_player_info(p)
+          p.hydrate_player_info
         rescue
           puts 'retry...'
           retry
@@ -119,7 +119,6 @@ class Player < ApplicationRecord
     Player.find(id_to_destroy).results.update_all(player_id: id_in)
     Player.find(id_to_destroy).destroy
   end
-
 
   def self.merge_in_array(id_in, arr)
     arr.each do |id_to_destroy|
@@ -180,8 +179,7 @@ class Player < ApplicationRecord
     end
   end
 
-  def self.hydrate_player_info(player)
-    smashgg_user_id = player.smashgg_user_id
+  def hydrate_player_info
     sleep(1)
     smashgg_user = query_smash_gg(user_query(smashgg_user_id))
     params = {
@@ -189,6 +187,7 @@ class Player < ApplicationRecord
       current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
         r['title'] != 'MPGR: 2019 MPGR'
       end.try(:[], 0).try(:[], 'rank'),
+      username: smashgg_user.dig('data', 'user', 'name'),
       country: smashgg_user.dig('data', 'user', 'location', 'country'),
       state: smashgg_user.dig('data', 'user', 'location', 'state'),
       city: smashgg_user.dig('data', 'user', 'location', 'city'),
@@ -212,11 +211,11 @@ class Player < ApplicationRecord
       end.try(:[], 0).try(:[], 'externalUsername')
     }.reject { |_, v| v.blank? }
 
-    player.update(params)
+    update(params)
   end
 
   def self.hydrate_players_info
-    players = Player.where('smashgg_user_id is not null').order(elo: :desc)
+    players = Player.where('smashgg_user_id is not null and profile_picture_url is null and country is null').order(elo: :desc)
 
     bar = ProgressBar.new(players.count)
 
@@ -224,7 +223,7 @@ class Player < ApplicationRecord
       players.each do |player|
         bar.increment!
         begin
-          hydrate_player_info(player)
+          player.hydrate_player_info
         rescue
           puts 'retry...'
           retry

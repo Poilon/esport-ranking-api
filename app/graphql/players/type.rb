@@ -1,6 +1,7 @@
 Players::Type = GraphQL::ObjectType.define do
   name 'Player'
   field :id, !types.String
+  field :username, types.String
   field :prefix, types.String
   field :hide, types.Boolean
   field :winning_matches, types[Matches::Type]
