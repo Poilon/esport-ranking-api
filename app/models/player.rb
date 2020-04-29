@@ -181,7 +181,7 @@ class Player < ApplicationRecord
 
   def hydrate_player_info
     sleep(1)
-    smashgg_user = query_smash_gg(user_query(smashgg_user_id))
+    smashgg_user = query_smash_gg(User.user_query(smashgg_user_id))
     params = {
       prefix: smashgg_user.dig('data', 'user', 'player', 'prefix'),
       current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
