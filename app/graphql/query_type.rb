@@ -31,6 +31,10 @@ QueryType = GraphQL::ObjectType.define do
     resolve ApplicationService.call(:players, :index)
   end
 
+  field :random_tournament, Tournaments::Type do
+    resolve ->(_, _, _) { Tournament.order('RANDOM()').first }
+  end
+
   field :countries, types[types.String] do
     resolve lambda { |_, _, _|
       ['Europe'] + ['United States'] + (Player.pluck(:country).uniq.compact.sort.reject { |e| e == 'United States' })
