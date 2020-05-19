@@ -2,6 +2,20 @@ QueryType = GraphQL::ObjectType.define do
   name 'Query'
 
   Graphql::Rails::Api::Config.query_resources.each do |resource|
+
+    resource.pluralize.camelize.constantize.const_set(
+      'PaginatedType',
+      GraphQL::ObjectType.define do
+        name "Paginated#{resource.classify}"
+
+        field :total_count, !types.Int
+        field :page, !types.Int
+        field :per_page, !types.Int
+        field :data, !types[!"#{resource.pluralize.camelize}::Type".constantize]
+
+      end
+    )
+
     field resource.singularize do
       description "Returns a #{resource.classify}"
       type !"#{resource.camelize}::Type".constantize
@@ -19,6 +33,15 @@ QueryType = GraphQL::ObjectType.define do
       resolve ApplicationService.call(resource, :index)
     end
 
+    field "paginated_#{resource.pluralize}" do
+      description "Return paginated #{resource.classify}"
+      type "#{resource.camelize}::PaginatedType".constantize
+      argument :filter, types.String
+      argument :order_by, types.String
+      argument :page, !types.Int
+      argument :per_page, !types.Int
+      resolve ApplicationService.call(resource, :paginated_index)
+    end
   end
 
   field :players, types[Players::Type] do
@@ -29,6 +52,16 @@ QueryType = GraphQL::ObjectType.define do
     argument :order_by, types.String
     argument :characters, types.String
     resolve ApplicationService.call(:players, :index)
+  end
+
+  field :paginated_players, Players::PaginatedType do
+    argument :active, types.Boolean
+    argument :filter, types.String
+    argument :order_by, types.String
+    argument :page, !types.Int
+    argument :per_page, !types.Int
+    argument :characters, types.String
+    resolve ApplicationService.call(:players, :paginated_index)
   end
 
   field :random_tournament, Tournaments::Type do

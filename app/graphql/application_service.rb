@@ -21,9 +21,9 @@ class ApplicationService
     }
   end
 
-  def index
-    Graphql::HydrateQuery.new(
-      model.all,
+  def index(collection = model.all)
+    HydrateQuery.new(
+      collection,
       @context,
       order_by: params[:order_by],
       filter: params[:filter],
@@ -33,8 +33,20 @@ class ApplicationService
     ).run.compact
   end
 
+  def paginated_index(collection = model.all)
+    HydrateQuery.new(
+      collection,
+      @context,
+      order_by: params[:order_by],
+      filter: params[:filter],
+      page: params[:page],
+      per_page: params[:per_page],
+      user: user
+    ).paginated_run
+  end
+
   def show
-    object = Graphql::HydrateQuery.new(model.all, @context, user: user, id: params[:id]).run
+    object = HydrateQuery.new(model.all, @context, user: user, id: params[:id]).run
     return not_allowed if object.blank?
 
     object
@@ -54,7 +66,7 @@ class ApplicationService
   def bulk_create
     result = model.import(params.map { |p| p.select { |param| model.new.respond_to?(param) } })
     result.each { |e| e.run_callbacks(:save) }
-    hyd = Graphql::HydrateQuery.new(model.where(id: result.ids), @context).run.compact + result.failed_instances.map do |i|
+    hyd = HydrateQuery.new(model.where(id: result.ids), @context).run.compact + result.failed_instances.map do |i|
       graphql_error(i.errors.full_messages)
     end
     return hyd.first if hyd.all? { |e| e.is_a?(GraphQL::ExecutionError) }
@@ -69,7 +81,7 @@ class ApplicationService
     hash = params.each_with_object({}) { |p, h| h[p.delete(:id)] = p }
     failed_instances = []
     result = model.update(hash.keys, hash.values).map { |e| e.errors.blank? ? e : (failed_instances << e && nil) }
-    hyd = Graphql::HydrateQuery.new(model.where(id: result.compact.map(&:id)), @context).run.compact + failed_instances.map do |i|
+    hyd = HydrateQuery.new(model.where(id: result.compact.map(&:id)), @context).run.compact + failed_instances.map do |i|
       graphql_error(i.errors.full_messages)
     end
     hyd.all? { |e| e.is_a?(GraphQL::ExecutionError) } ? hyd.first : hyd
@@ -141,4 +153,3 @@ class ApplicationService
   end
 
 end
-

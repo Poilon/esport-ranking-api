@@ -18,7 +18,7 @@ class Match < ApplicationRecord
   end
 
   def self.run
-    items = Tournament.joins(:matches).where(matches: { played: false }).order('date asc').distinct
+    items = Tournament.where(online: false).joins(:matches).where(matches: { played: false }).order('date asc').distinct
     bar = ProgressBar.new(items.count)
 
     without_logs do
