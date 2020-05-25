@@ -32,7 +32,7 @@ QueryType = GraphQL::ObjectType.define do
   end
 
   field :random_tournament, Tournaments::Type do
-    resolve ->(_, _, _) { Tournament.order('RANDOM()').first }
+    resolve ->(_, _, _) { Tournament.joins(:results).where('results.id IS NOT NULL').order('RANDOM()').first }
   end
 
   field :countries, types[types.String] do
