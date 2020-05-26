@@ -31,4 +31,3 @@ class SubscriptionsChannel < ApplicationCable::Channel
   end
 
 end
-
