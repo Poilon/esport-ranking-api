@@ -31,19 +31,29 @@ class ApplicationRecord < ActiveRecord::Base
   end
 
   def self.query_smash_gg(query)
-    HTTParty.post(
-      'https://api.smash.gg/gql/alpha',
-      body: { query: query },
-      headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
-    )
+    begin
+      HTTParty.post(
+        'https://api.smash.gg/gql/alpha',
+        body: { query: query },
+        headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
+      )
+    rescue
+      puts "Retrying for query... #{query[0..10]}"
+      retry
+    end
   end
 
   def query_smash_gg(query)
-    HTTParty.post(
-      'https://api.smash.gg/gql/alpha',
-      body: { query: query },
-      headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
-    )
+    begin
+      HTTParty.post(
+        'https://api.smash.gg/gql/alpha',
+        body: { query: query },
+        headers: { Authorization: "Bearer #{ENV['SMASHGG_API_TOKEN']}" }
+      )
+    rescue
+      puts "Retrying for query... #{query[0..10]}"
+      retry
+    end
   end
 
   def without_logs

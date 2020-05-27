@@ -15,7 +15,11 @@ class GraphqlController < ApplicationController
   private
 
   def authenticated_user
-    # Here you need to authenticate the user.
+    puts "############################## #{request.env['HTTP_SESSIONID']}"
+    return if request.env['HTTP_SESSIONID'].blank? || request.env['HTTP_SESSIONID'] == 'null'
+
+    crypt = ActiveSupport::MessageEncryptor.new(Base64.decode64(ENV['SECRET_AUTH_KEY']))
+    User.find_by(id: crypt.decrypt_and_verify(request.env['HTTP_SESSIONID']))
   end
 
   # Handle form data, JSON body, or a blank value
