@@ -64,8 +64,27 @@ QueryType = GraphQL::ObjectType.define do
     resolve ApplicationService.call(:players, :paginated_index)
   end
 
+  field :random_tournaments, types[Tournaments::Type] do
+    resolve ->(_, _, _) { 
+      i = 0
+      tournaments = Array.new
+      loop do 
+        i += 1
+        tournaments.push(Tournament.joins(:results).where('results.id IS NOT NULL').order('RANDOM()').first)
+        if i == 9
+          break
+        end
+      end
+      return tournaments
+    }
+  end
+
   field :random_tournament, Tournaments::Type do
     resolve ->(_, _, _) { Tournament.joins(:results).where('results.id IS NOT NULL').order('RANDOM()').first }
+  end
+
+  field :random_quizz, Quizzs::Type do
+    resolve ->(_, _, _) { Quizz.order('RANDOM()').first }
   end
 
   field :countries, types[types.String] do
