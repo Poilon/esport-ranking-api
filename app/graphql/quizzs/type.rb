@@ -1,6 +1,7 @@
 Quizzs::Type = GraphQL::ObjectType.define do
   name 'Quizz'
   field :id, !types.String
+  field :starts_at, types.Int
   field :quizz_question_ids, types[types.String] do
     resolve CollectionIdsResolver
   end
