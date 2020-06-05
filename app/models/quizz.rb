@@ -31,4 +31,30 @@ class Quizz < ApplicationRecord
     end
   end
 
+  def self.generate_quizzs
+    i = 0
+    starts = 1591307032
+    until i == 100 do
+      i += 1
+      quizz = Quizz.create
+      questions_count = 0
+      quizz.update(starts_at: starts) 
+      starts += 180
+      tournaments = Tournament.joins(:results).order('RANDOM()').limit(100)
+      tournaments.each do |tournament|
+        next if tournament.results.count < 4
+        break if questions_count > 10
+
+        questions_count += 1
+        q = Question.create(name: "Who won #{tournament.name} ?")
+        a = q.answers.create(name: "#{tournament.results.find_by(rank: 1)&.player&.name}")
+        q.answers.create(name: "#{tournament.results.find_by(rank: 2)&.player&.name}")
+        q.answers.create(name: "#{tournament.results.find_by(rank: 3)&.player&.name}")
+        q.answers.create(name: "#{tournament.results.find_by(rank: 4)&.player&.name}")
+        q.update(answer_id: a.id)
+        quizz.questions << q
+      end
+    end
+  end
+
 end

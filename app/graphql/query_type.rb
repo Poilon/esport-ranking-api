@@ -87,6 +87,10 @@ QueryType = GraphQL::ObjectType.define do
     resolve ->(_, _, _) { Quizz.order('RANDOM()').first }
   end
 
+  field :next_quizz, Quizzs::Type do 
+    resolve ->(_, _, _) { Quizz.where("starts_at > ?", Time.now.to_i).first }    
+  end
+
   field :countries, types[types.String] do
     resolve lambda { |_, _, _|
       ['Europe'] + ['United States'] + (Player.pluck(:country).uniq.compact.sort.reject { |e| e == 'United States' })
