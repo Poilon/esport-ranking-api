@@ -11,5 +11,5 @@ MutationType = GraphQL::ObjectType.define do
   end
 
   field :update_player, Players::Mutations::Update
-
+  field :add_score, Users::Mutations::AddScore
 end

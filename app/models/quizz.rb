@@ -33,14 +33,14 @@ class Quizz < ApplicationRecord
 
   def self.generate_quizzs
     i = 0
-    starts = 1591307032
+    starts = Time.now.to_i
     until i == 100 do
       i += 1
       quizz = Quizz.create
       questions_count = 0
       quizz.update(starts_at: starts) 
-      starts += 180
-      tournaments = Tournament.joins(:results).order('RANDOM()').limit(100)
+      starts += 60
+      tournaments = Tournament.joins(:results).order('RANDOM()').limit(1000)
       tournaments.each do |tournament|
         next if tournament.results.count < 4
         break if questions_count > 10
@@ -55,6 +55,13 @@ class Quizz < ApplicationRecord
         quizz.questions << q
       end
     end
+  end
+
+  def self.deleting
+    Quizz.delete_all
+    QuizzQuestion.delete_all
+    Answer.delete_all
+    Question.delete_all
   end
 
 end
