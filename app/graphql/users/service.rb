@@ -13,5 +13,12 @@ module Users
       end
     end
 
+    def add_score
+      u = User.find(params[:id])
+      u.global_quizz_score += params[:score]
+      u.save
+      u
+    end
+
   end
 end

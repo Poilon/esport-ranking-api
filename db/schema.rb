@@ -184,7 +184,7 @@ ActiveRecord::Schema.define(version: 2020_06_03_091423) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "encrypted_password"
-    t.integer "global_quizz_score"
+    t.integer "global_quizz_score", default: 0
   end
 
   create_table "websocket_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
