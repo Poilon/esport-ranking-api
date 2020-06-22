@@ -7,9 +7,7 @@ Users::Mutations::AddScore = GraphQL::Field.define do
 
     def resolve(id:, score:)
         u = User.find(id)
-        uS = u.global_quizz_score
-        uS += score 
-        u.global_quizz_score = uS 
+        u.global_quizz_score += score
         u.save
     end
   end
