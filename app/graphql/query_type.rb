@@ -87,8 +87,12 @@ QueryType = GraphQL::ObjectType.define do
     resolve ->(_, _, _) { Quizz.order('RANDOM()').first }
   end
 
-  field :next_quizz, Quizzs::Type do 
-    resolve ->(_, _, _) { Quizz.where("starts_at > ?", Time.now.to_i).first }    
+  field :next_quizz, types[Quizzs::Type] do 
+    resolve ->(_, _, _) { Quizz.where("starts_at > ?", Time.now.to_i).limit(1) }    
+  end
+
+  field :leaderboard, types[Users::Type] do
+    resolve ->(_, _, _) { User.order("global_quizz_score DESC") }
   end
 
   field :countries, types[types.String] do

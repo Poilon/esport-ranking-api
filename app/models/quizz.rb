@@ -36,16 +36,16 @@ class Quizz < ApplicationRecord
     starts = Time.now.to_i
     bar = ProgressBar.new(100)
     without_logs do
+      # should be 480 (1 quizz per 3 min, 20 quizzs per hour, 480 quizzs per day)
       until i == 100 do
         bar.increment!
         i += 1
         quizz = Quizz.create
         questions_count = 0
         quizz.update(starts_at: starts)
-        starts += 60
-        tournaments = Tournament.joins(:results).order('RANDOM()').limit(1000)
+        starts += 180
+        tournaments = Tournament.joins(:results).group('tournaments.id').having('count(tournaments.id) > 4').order('RANDOM()').limit(1000)
         tournaments.each do |tournament|
-          next if tournament.results.count < 4
           break if questions_count > 10
 
           questions_count += 1
