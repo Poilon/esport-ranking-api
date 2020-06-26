@@ -36,8 +36,8 @@ class Quizz < ApplicationRecord
     starts = Time.now.to_i
     bar = ProgressBar.new(100)
     without_logs do
-      # should be 480 (1 quizz per 3 min, 20 quizzs per hour, 480 quizzs per day)
-      until i == 100 do
+      # 480 quizzs (1 quizz per 3 min, 20 quizzs per hour, 480 quizzs per day)
+      until i == 50 do
         bar.increment!
         i += 1
         quizz = Quizz.create
@@ -46,16 +46,36 @@ class Quizz < ApplicationRecord
         starts += 180
         tournaments = Tournament.joins(:results).group('tournaments.id').having('count(tournaments.id) > 4').order('RANDOM()').limit(1000)
         tournaments.each do |tournament|
-          break if questions_count > 10
+          break if questions_count >= 5
 
           questions_count += 1
-          q = Question.create(name: "Who won #{tournament.name} ?")
+          q = Question.create(name: "Who won #{tournament.name} that happened the #{tournament.date} ?")
           a = q.answers.create(name: "#{tournament.results.find_by(rank: 1)&.player&.name}")
           q.answers.create(name: "#{tournament.results.find_by(rank: 2)&.player&.name}")
           q.answers.create(name: "#{tournament.results.find_by(rank: 3)&.player&.name}")
           q.answers.create(name: "#{tournament.results.find_by(rank: 4)&.player&.name}")
           q.update(answer_id: a.id)
           quizz.questions << q
+        end
+
+        # who is 1st of x
+        countries = ['Europe'] + ['United States'] + (Player.pluck(:country).uniq.compact.sort.reject { |e| e == 'United States' })
+        until questions_count == 10 do
+          questions_count += 1
+          loop do 
+            random = rand(0..countries.length - 1)
+            players = Player.where(country: countries[random]).group(:id).order(elo: :desc).limit(4)
+            break if players.length < 4
+            
+            q = Question.create(name: "Who is the best player in #{countries[random]} ?")
+            a = q.answers.create(name: "#{players[0].name}")
+            q.answers.create(name: "#{players[1].name}")
+            q.answers.create(name: "#{players[2].name}")
+            q.answers.create(name: "#{players[3].name}")
+            q.update(answer_id: a.id)
+            quizz.questions << q 
+          end          
+          
         end
       end
     end
