@@ -88,7 +88,7 @@ QueryType = GraphQL::ObjectType.define do
   end
 
   field :next_quizz, types[Quizzs::Type] do 
-    resolve ->(_, _, _) { Quizz.where("starts_at > ?", Time.now.to_i).limit(1) }    
+    resolve ->(_, _, _) { Quizz.where("starts_at > ?", Time.now.to_i).order(:starts_at).limit(1) }    
   end
 
   field :leaderboard, types[Users::Type] do

@@ -1,6 +1,8 @@
 Users::Type = GraphQL::ObjectType.define do
   name 'User'
   field :id, !types.String
+  field :name, types.String
+  field :name, types.String
   field :user_answer_ids, types[types.String] do
     resolve CollectionIdsResolver
   end
