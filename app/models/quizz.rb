@@ -50,7 +50,7 @@ class Quizz < ApplicationRecord
 
           questions_count += 1
           date = tournament.date.strftime("%d/%m/%Y")
-          q = Question.create(name: "Who won #{tournament.name} (#{date}) ?")
+          q = Question.create(name: "Who won #{tournament.name} (#{date})?")
           a = q.answers.create(name: "#{tournament.results.find_by(rank: 1)&.player&.name}")
           q.answers.create(name: "#{tournament.results.find_by(rank: 2)&.player&.name}")
           q.answers.create(name: "#{tournament.results.find_by(rank: 3)&.player&.name}")
@@ -76,16 +76,30 @@ class Quizz < ApplicationRecord
           break if questions_count >= 10
           questions_count += 1
 
-          p = Player.where(country: country).order(elo: :desc).limit(4)
-          q = Question.create(name: "Who is currenly ranked #1 in #{country}?")
-          a = q.answers.create(name: "#{p[0].name}")
-          q.answers.create(name: "#{p[1].name}")
-          q.answers.create(name: "#{p[2].name}")
-          q.answers.create(name: "#{p[3].name}")
-          q.update(answer_id: a.id)
-          quizz.questions << q
+          states = { "AK" => "Alaska", "AL" => "Alabama", "AR" => "Arkansas", "AS" => "American Samoa", "AZ" => "Arizona", "CA" => "California", "CO" => "Colorado", "CT" => "Connecticut", "DC" => "District of Columbia", "DE" => "Delaware", "FL" => "Florida", "GA" => "Georgia", "GU" => "Guam", "HI" => "Hawaii", "IA" => "Iowa", "ID" => "Idaho", "IL" => "Illinois", "IN" => "Indiana", "KS" => "Kansas", "KY" => "Kentucky", "LA" => "Louisiana", "MA" => "Massachusetts", "MD" => "Maryland", "ME" => "Maine", "MI" => "Michigan", "MN" => "Minnesota", "MO" => "Missouri", "MS" => "Mississippi", "MT" => "Montana", "NC" => "North Carolina", "ND" => "North Dakota", "NE" => "Nebraska", "NH" => "New Hampshire", "NJ" => "New Jersey", "NM" => "New Mexico", "NV" => "Nevada", "NY" => "New York", "OH" => "Ohio", "OK" => "Oklahoma", "OR" => "Oregon", "PA" => "Pennsylvania", "PR" => "Puerto Rico", "RI" => "Rhode Island", "SC" => "South Carolina", "SD" => "South Dakota", "TN" => "Tennessee", "TX" => "Texas", "UT" => "Utah", "VA" => "Virginia", "VI" => "Virgin Islands", "VT" => "Vermont", "WA" => "Washington", "WI" => "Wisconsin", "WV" => "West Virginia", "WY" => "Wyoming" }
+
+          if country == 'United States'
+            usaStates = Player.where(country: 'United States').pluck(:state).uniq.compact.sort
+            random = rand(usaStates.length)
+            playerUSAstate = Player.where(state: usaStates[random]).order(elo: :desc).limit(4)
+            q = Question.create(name: "Who is the best player in the state of #{states[usaStates[random]]} in the USA?" )
+            a = q.answers.create(name: "#{playerUSAstate[0].name}")
+            q.answers.create(name: "#{playerUSAstate[1].name}")
+            q.answers.create(name: "#{playerUSAstate[2].name}")
+            q.answers.create(name: "#{playerUSAstate[3].name}")
+            q.update(answer_id: a.id)
+            quizz.questions << q
+          else 
+            p = Player.where(country: country).order(elo: :desc).limit(4)
+            q = Question.create(name: "Who is currenly ranked #1 in #{country}?")
+            a = q.answers.create(name: "#{p[0].name}")
+            q.answers.create(name: "#{p[1].name}")
+            q.answers.create(name: "#{p[2].name}")
+            q.answers.create(name: "#{p[3].name}")
+            q.update(answer_id: a.id)
+            quizz.questions << q
+          end
         end
-    
       end
     end
   end
