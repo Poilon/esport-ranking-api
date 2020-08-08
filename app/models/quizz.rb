@@ -124,10 +124,12 @@ class Quizz < ApplicationRecord
         frameFalse1 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + 5
         frameFalse2 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i - 5
         frameFalse3 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + 8
+        gifUrl = data_hash["attacks"][move][randomMoveNumber]["gif_url"]
         a = q.answers.create(name: "#{frameTrue}")
         q.answers.create(name: "#{frameFalse1}")
         q.answers.create(name: "#{frameFalse2}")
         q.answers.create(name: "#{frameFalse3}")
+        q.answers.create(name: "#{gifUrl}")
         q.update(answer_id: a.id)
         quizz.questions << q
       end
