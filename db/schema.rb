@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_06_29_225441) do
+ActiveRecord::Schema.define(version: 2020_08_10_121814) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
@@ -114,6 +114,7 @@ ActiveRecord::Schema.define(version: 2020_06_29_225441) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "answer_id"
+    t.string "gif_url"
   end
 
   create_table "quizz_questions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

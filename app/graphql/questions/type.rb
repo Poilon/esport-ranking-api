@@ -1,6 +1,8 @@
 Questions::Type = GraphQL::ObjectType.define do
   name 'Question'
   field :id, !types.String
+  field :gif_url, types.String
+  field :gif_url, types.String
   field :answer_id, types.String
   field :answer, Answers::Type
   field :answer_ids, types[types.String] do

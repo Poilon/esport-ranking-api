@@ -37,7 +37,7 @@ class Quizz < ApplicationRecord
     bar = ProgressBar.new(100)
     without_logs do
       # 480 quizzs (1 quizz per 3 min, 20 quizzs per hour, 480 quizzs per day)
-      until i == 20 do
+      until i == 30 do
         bar.increment!
         i += 1
         quizz = Quizz.create
@@ -121,15 +121,15 @@ class Quizz < ApplicationRecord
         q = Question.create(name: "How much frame does the #{data_hash["attacks"][move][randomMoveNumber]["description"]} of #{data_hash["charname"]} last?")
 
         frameTrue = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i
-        frameFalse1 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + 5
-        frameFalse2 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i - 5
-        frameFalse3 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + 8
+        frameFalse1 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + rand(5)
+        frameFalse2 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i - rand(5)
+        frameFalse3 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + rand(8)
         gifUrl = data_hash["attacks"][move][randomMoveNumber]["gif_url"]
         a = q.answers.create(name: "#{frameTrue}")
         q.answers.create(name: "#{frameFalse1}")
         q.answers.create(name: "#{frameFalse2}")
         q.answers.create(name: "#{frameFalse3}")
-        q.answers.create(name: "#{gifUrl}")
+        q.update(gif_url: "#{gifUrl}")
         q.update(answer_id: a.id)
         quizz.questions << q
       end
