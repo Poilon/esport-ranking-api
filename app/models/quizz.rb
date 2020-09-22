@@ -48,6 +48,9 @@ class Quizz < ApplicationRecord
         tournaments.each do |tournament|
           break if questions_count >= 5
           next if tournament.results.count < 4
+          next if tournament.results.find_by(rank: 2)&.player&.name == ""
+          next if tournament.results.find_by(rank: 3)&.player&.name == ""
+          next if tournament.results.find_by(rank: 4)&.player&.name == ""
 
           questions_count += 1
           date = tournament.date.strftime("%d/%m/%Y")
@@ -111,29 +114,39 @@ class Quizz < ApplicationRecord
         end
 
         # frame data question
-        file = File.read(File.expand_path('../../../framedata/fox.json', __FILE__))
+        characters = ["fox", "falco"]
+        who = rand(2)
+        filePathChar = "../../../framedata/" + characters[who] + ".json"
+        file = File.read(File.expand_path(filePathChar, __FILE__))
         data_hash = JSON.parse(file)
         moves = ["aerial", "smash", "tilt", "special", "jab", "dash", "grab", "dodge", "roll"]
         randomMove = rand(moves.length)
         move = moves[randomMove]
         randomMoveNumber = rand(data_hash["attacks"][move].length)
         #binding.pry
-        q = Question.create(name: "How much frame does the #{data_hash["attacks"][move][randomMoveNumber]["description"]} of #{data_hash["charname"]} last?")
+
+        moveName = data_hash["attacks"][move][randomMoveNumber]["description"].downcase!
 
         frameTrue = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i
         frameFalse1 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + rand(5)
         frameFalse2 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i - rand(5)
-        frameFalse3 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + rand(8)
+        frameFalse3 = data_hash["attacks"][move][randomMoveNumber]["total_frames"].to_i + 6
         gifUrl = data_hash["attacks"][move][randomMoveNumber]["gif_url"]
-        a = q.answers.create(name: "#{frameTrue}")
-        q.answers.create(name: "#{frameFalse1}")
-        q.answers.create(name: "#{frameFalse2}")
-        q.answers.create(name: "#{frameFalse3}")
-        q.update(gif_url: "#{gifUrl}")
-        q.update(answer_id: a.id)
-        quizz.questions << q
+        frame_data("How many frames does the #{moveName} of #{data_hash["charname"]} last?", frameTrue, frameFalse1, frameFalse2, frameFalse3, gifUrl, quizz)
       end
     end
+  end
+
+  def self.frame_data(question, good_answer, answer1, answer2, answer3, gifUrl, quizz)
+    q = Question.create(name: question)
+    a = q.answers.create(name: good_answer)
+    q.answers.create(name: answer1)
+    q.answers.create(name: answer2)
+    q.answers.create(name: answer3)
+    q.update(gif_url: "#{gifUrl}")
+    q.update(answer_id: a.id)
+    quizz.questions << q
+    quizz
   end
 
   def self.deleting
