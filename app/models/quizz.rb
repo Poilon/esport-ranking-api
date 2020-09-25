@@ -108,11 +108,11 @@ class Quizz < ApplicationRecord
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         # characters
-        characters = ["fox", "falco"]
+        characters = ["fox", "falco", "marth"]
         # picking one
-        who = rand(2)
+        who = rand(3)
         # path of the json frame data file
-        filePathChar = "../../../framedata/" + characters[who] + ".json"
+        filePathChar = "../../../framedata/" + "marth" + ".json" #characters[who]
         file = File.read(File.expand_path(filePathChar, __FILE__))
         data_hash = JSON.parse(file)
         # moves possible
