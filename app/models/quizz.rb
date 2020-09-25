@@ -46,7 +46,7 @@ class Quizz < ApplicationRecord
           # Question & Answers creation
           questions_count += 1
           date = tournament.date.strftime("%d/%m/%Y")
-          question_create("Who won #{tournament.name} (#{date})?", tournament.results.find_by(rank: 1)&.player&.name, tournament.results.find_by(rank: 2)&.player&.name, tournament.results.find_by(rank: 3)&.player&.name, tournament.results.find_by(rank: 4)&.player&.name, nil, quizz)
+          question_create("Who won \"#{tournament.name}\" (#{date})?", tournament.results.find_by(rank: 1)&.player&.name, tournament.results.find_by(rank: 2)&.player&.name, tournament.results.find_by(rank: 3)&.player&.name, tournament.results.find_by(rank: 4)&.player&.name, nil, quizz)
         end
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
