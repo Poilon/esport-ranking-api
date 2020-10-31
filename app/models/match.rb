@@ -18,7 +18,7 @@ class Match < ApplicationRecord
   end
 
   def self.run
-    items = Tournament.where(online: false).joins(:matches).where(matches: { played: false }).order('date asc').distinct
+    items = Tournament.joins(:matches).where(matches: { played: false }).order('date asc').distinct
     bar = ProgressBar.new(items.count)
 
     without_logs do
@@ -68,6 +68,16 @@ class Match < ApplicationRecord
     end
 
     ActiveRecord::Base.logger = old_logger
+  end
+
+  def self.run_score
+    score_by_rank = { 17 => 1, 13 => 2, 9 => 3, 7 => 5, 5 => 7, 4 => 9, 3 => 12, 2 => 16, 1 => 24 }
+
+    Player.all.each do |p|
+      s = 0
+      p.results.map { |r| s += score_by_rank[r.rank].to_i }
+      p.update(score: s)
+    end
   end
 
 end
