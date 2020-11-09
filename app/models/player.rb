@@ -159,15 +159,15 @@ class Player < ApplicationRecord
   end
 
   def best_win
-    winning_matches.joins(:loser).order('players.elo desc').first
+    winning_matches.joins(:loser).order('players.score desc').first
   end
 
   def best_wins(number)
-    winning_matches.joins(:loser).order('players.elo desc').first(number)
+    winning_matches.joins(:loser).order('players.score desc').first(number)
   end
 
   def worst_lose
-    losing_matches.joins(:winner).order('players.elo asc').first
+    losing_matches.joins(:winner).order('players.score asc').first
   end
 
   def elo_diffs
