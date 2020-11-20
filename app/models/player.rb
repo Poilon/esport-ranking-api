@@ -36,17 +36,17 @@ class Player < ApplicationRecord
   end
 
   def tournaments_diffs
-    return {}.to_json if elo_by_times.blank?
+    return {}.to_json # if elo_by_times.blank?
 
-    groups = elo_by_times.order(created_at: :asc).deep_pluck(
-      :elo, match: { tournament: :id }
-    ).group_by { |e| e[:match][:tournament]['id'] }
+    # groups = elo_by_times.order(created_at: :asc).deep_pluck(
+    #   :elo, match: { tournament: :id }
+    # ).group_by { |e| e[:match][:tournament]['id'] }
 
-    current_elo = 1500
-    groups.each_with_object({}) do |(t_id, ebts), h|
-      h[t_id] = { from: current_elo, to: ebts.last['elo'] }
-      current_elo = ebts.last['elo']
-    end.to_json
+    # current_elo = 1500
+    # groups.each_with_object({}) do |(t_id, ebts), h|
+    #   h[t_id] = { from: current_elo, to: ebts.last['elo'] }
+    #   current_elo = ebts.last['elo']
+    # end.to_json
   end
 
   def elo_map

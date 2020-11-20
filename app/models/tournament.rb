@@ -32,6 +32,7 @@ class Tournament < ApplicationRecord
     event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
 
     find_by(smashgg_id: smashgg_id).update(processed: true)
+
     return if !event || event.dig('state') != 'COMPLETED'
 
     pages_count = event.dig('standings', 'pageInfo', 'totalPages') || 0
