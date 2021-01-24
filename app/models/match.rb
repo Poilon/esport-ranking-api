@@ -71,7 +71,7 @@ class Match < ApplicationRecord
   end
 
   def self.run_score
-    score_by_rank = { 17 => 1, 13 => 2, 9 => 3, 7 => 5, 5 => 7, 4 => 9, 3 => 12, 2 => 16, 1 => 24 }
+    score_by_rank = { 25 => 5, 17 => 10, 13 => 15, 9 => 20, 7 => 30, 5 => 40, 4 => 50, 3 => 65, 2 => 80, 1 => 100 }
 
     Player.all.each do |p|
       s = 0
