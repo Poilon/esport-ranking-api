@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_03_01_223118) do
+ActiveRecord::Schema.define(version: 2021_03_02_151358) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -22,6 +22,7 @@ ActiveRecord::Schema.define(version: 2021_03_01_223118) do
     t.uuid "game_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "smashgg_id"
   end
 
   create_table "elo_by_times", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

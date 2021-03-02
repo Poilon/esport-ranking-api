@@ -20,8 +20,8 @@ class Tournament < ApplicationRecord
       find(id).results.destroy_all
       find(id).matches.destroy_all
 
-      import_tournament_results(smashgg_id)
       import_matches_of_tournament_from_smashgg(smashgg_id)
+      import_tournament_results(smashgg_id)
     end
   end
 
@@ -148,15 +148,15 @@ class Tournament < ApplicationRecord
 
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
     sleep(1)
-    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 40)).dig(
+    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 15)).dig(
       'data', 'event', 'sets', 'pageInfo', 'totalPages'
     )
 
-    puts "#{total_pages.to_i * 40} matches to import for #{smashgg_event_id} "
+    puts "#{total_pages.to_i * 15} matches to import for #{smashgg_event_id} "
 
     (total_pages || 0).times do |page|
       sleep(1)
-      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 40)).dig('data', 'event', 'sets', 'nodes') || []
+      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 15)).dig('data', 'event', 'sets', 'nodes') || []
 
       print '.'
       matchs.each do |m|
@@ -169,6 +169,14 @@ class Tournament < ApplicationRecord
         loser_player = player_ids.reject { |k, _| k == m['winnerId'] }&.values&.first
 
         next if !winner_player || !loser_player
+
+        winner_character_smashgg_ids = m['games']&.map do |e|
+          e.try(:[], 'selections')
+        end&.flatten&.select { |a| a&.dig('entrant', 'id') == m['winnerId'] }&.map { |e| e.try(:[], 'selectionValue') }&.uniq
+
+        loser_character_smashgg_ids = m['games']&.map do |e|
+          e.try(:[], 'selections')
+        end&.flatten&.reject { |a| a&.dig('entrant', 'id') == m['winnerId'] }&.map { |e| e.try(:[], 'selectionValue') }&.uniq
 
         winner_params = {
           smashgg_id: winner_player.map { |p| p.dig('player', 'id') }.sort.join(''),
@@ -188,9 +196,13 @@ class Tournament < ApplicationRecord
 
         winner = Player.find_by(smashgg_id: winner_params[:smashgg_id])
         winner ? winner.update(winner_params) : winner = Player.create(winner_params)
+        wcharacter_ids = (winner.character_ids + Character.where(smashgg_id: winner_character_smashgg_ids).pluck(:id)).uniq
+        winner.update(character_ids: wcharacter_ids)
 
         loser = Player.find_by(smashgg_id: loser_params[:smashgg_id])
         loser ? loser.update(loser_params) : loser = Player.create(loser_params)
+        lcharacter_ids = (loser.character_ids + Character.where(smashgg_id: loser_character_smashgg_ids).pluck(:id)).uniq
+        loser.update(character_ids: lcharacter_ids)
 
         tournament = Tournament.find_by(smashgg_id: smashgg_event_id)
 
@@ -237,6 +249,30 @@ class Tournament < ApplicationRecord
               round
               fullRoundText
               displayScore
+
+              games {
+                id
+                stage {
+                  id
+                  name
+                }
+                selections {
+                  id
+                  selectionType
+                  selectionValue
+                  entrant {
+                    id
+                    name
+                    participants {
+                      player {
+                        id
+                        gamerTag
+                      }
+                    }
+                  }
+                }
+              }
+
               slots {
                 entrant {
                   id

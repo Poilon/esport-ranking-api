@@ -1,6 +1,7 @@
 Characters::Type = GraphQL::ObjectType.define do
   name 'Character'
   field :id, !types.String
+  field :smashgg_id, types.Int
   field :player_character_ids, types[types.String] do
     resolve CollectionIdsResolver
   end
