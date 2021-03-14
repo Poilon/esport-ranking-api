@@ -130,6 +130,7 @@ class Player < ApplicationRecord
     <<~STRING
       query UserQuery {
         user(id: #{smashgg_user_id}) {
+          genderPronoun
           authorizations {
             externalUsername
             type
@@ -187,6 +188,7 @@ class Player < ApplicationRecord
       current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
         r['title'] != 'MPGR: 2019 MPGR'
       end.try(:[], 0).try(:[], 'rank'),
+      gender_pronoun: smashgg_user.dig('data', 'user', 'genderPronoun'),
       username: smashgg_user.dig('data', 'user', 'name'),
       country: smashgg_user.dig('data', 'user', 'location', 'country'),
       state: smashgg_user.dig('data', 'user', 'location', 'state'),
@@ -215,7 +217,7 @@ class Player < ApplicationRecord
   end
 
   def self.hydrate_players_info
-    players = Player.where('smashgg_user_id is not null and profile_picture_url is null and country is null').order(elo: :desc)
+    players = Player.where('smashgg_user_id is not null').order(elo: :desc)
 
     bar = ProgressBar.new(players.count)
 

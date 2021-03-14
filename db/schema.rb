@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_03_02_151358) do
+ActiveRecord::Schema.define(version: 2021_03_14_173626) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -102,6 +102,7 @@ ActiveRecord::Schema.define(version: 2021_03_02_151358) do
     t.string "prefix"
     t.string "username"
     t.boolean "team"
+    t.string "gender_pronoun"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
