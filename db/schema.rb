@@ -10,10 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_04_29_083004) do
+ActiveRecord::Schema.define(version: 2021_03_14_173626) do
 
   # These are extensions that must be enabled in order to support this database
-  enable_extension "pgcrypto"
   enable_extension "plpgsql"
   enable_extension "uuid-ossp"
 
@@ -23,6 +22,7 @@ ActiveRecord::Schema.define(version: 2020_04_29_083004) do
     t.uuid "game_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "smashgg_id"
   end
 
   create_table "elo_by_times", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -56,6 +56,7 @@ ActiveRecord::Schema.define(version: 2020_04_29_083004) do
     t.string "display_score"
     t.integer "round"
     t.datetime "date"
+    t.boolean "teams"
   end
 
   create_table "player_characters", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -100,6 +101,8 @@ ActiveRecord::Schema.define(version: 2020_04_29_083004) do
     t.boolean "hide"
     t.string "prefix"
     t.string "username"
+    t.boolean "team"
+    t.string "gender_pronoun"
   end
 
   create_table "results", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

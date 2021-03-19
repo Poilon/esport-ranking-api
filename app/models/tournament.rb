@@ -11,11 +11,7 @@ class Tournament < ApplicationRecord
   end
 
   def self.import_tournament_results_and_matchs_from_smashgg
-    tournament_ids = Match.joins(:tournament).deep_pluck(
-      tournament: %i[id smashgg_id]
-    ).uniq.map do |e|
-      [e[:tournament]['id'], e[:tournament]['smashgg_id']]
-    end
+    tournament_ids = Tournament.all.pluck(:id, :smashgg_id)
 
     bar = ProgressBar.new(tournament_ids.count)
 
@@ -24,8 +20,8 @@ class Tournament < ApplicationRecord
       find(id).results.destroy_all
       find(id).matches.destroy_all
 
-      import_tournament_results(smashgg_id)
       import_matches_of_tournament_from_smashgg(smashgg_id)
+      import_tournament_results(smashgg_id)
     end
   end
 
@@ -36,18 +32,23 @@ class Tournament < ApplicationRecord
     event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
 
     find_by(smashgg_id: smashgg_id).update(processed: true)
+
     return if !event || event.dig('state') != 'COMPLETED'
 
     pages_count = event.dig('standings', 'pageInfo', 'totalPages') || 0
     pages_count.times do |page|
       standings = query_smash_gg(result_query(smashgg_id, page + 1)).dig('data', 'event', 'standings', 'nodes') || []
       standings.each do |s|
-        player = s.dig('entrant', 'participants')&.first&.try(:[], 'player')
+        player = s.dig('entrant', 'participants').map { |e| e.try(:[], 'player') }
         next unless player
 
-        params = { smashgg_id: player['id'], name: player['gamerTag'] }
-        p = Player.find_by(smashgg_id: player['id']) ||
-          Player.find_by(smashgg_user_id: player.dig('user', 'id')) ||
+        params = {
+          smashgg_id: player.map { |p| p.dig('id') }.sort.join(''),
+          name: player.map { |p| p.dig('gamerTag') }.sort.join(' / '),
+          team: player.count > 1
+        }
+        p = Player.find_by(smashgg_id: params[:smashgg_id]) ||
+          (Player.find_by(smashgg_user_id: player.first.dig('user', 'id')) if player.length == 1) ||
           Player.create(params)
 
         Result.find_or_create_by(
@@ -80,7 +81,7 @@ class Tournament < ApplicationRecord
 
     tournament['events'].each do |event|
 
-      next if event['type'] != 1
+      # next if event['type'] != 1
       next if event['videogame']['id'] != 1
 
       params = {
@@ -147,42 +148,61 @@ class Tournament < ApplicationRecord
 
   def self.import_matches_of_tournament_from_smashgg(smashgg_event_id)
     sleep(1)
-    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 60)).dig(
+    total_pages = query_smash_gg(matchs_total_pages(smashgg_event_id, 15)).dig(
       'data', 'event', 'sets', 'pageInfo', 'totalPages'
     )
 
-    puts "#{total_pages.to_i * 60} matches to import for #{smashgg_event_id} "
+    puts "#{total_pages.to_i * 15} matches to import for #{smashgg_event_id} "
 
     (total_pages || 0).times do |page|
       sleep(1)
-      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 60)).dig('data', 'event', 'sets', 'nodes') || []
+      matchs = query_smash_gg(matchs_query(smashgg_event_id, page + 1, 15)).dig('data', 'event', 'sets', 'nodes') || []
 
       print '.'
       matchs.each do |m|
         next if m['displayScore'] == 'DQ'
 
         player_ids = m.dig('slots')&.each_with_object({}) do |s, h|
-          h[s.dig('entrant', 'id')] = s.dig('entrant', 'participants')&.first
+          h[s.dig('entrant', 'id')] = s.dig('entrant', 'participants')
         end
         winner_player = player_ids.dig(m['winnerId'])
-        loser_player =  player_ids.reject { |k, _| k == m['winnerId'] }&.values&.first
+        loser_player = player_ids.reject { |k, _| k == m['winnerId'] }&.values&.first
 
         next if !winner_player || !loser_player
 
+        winner_character_smashgg_ids = m['games']&.map do |e|
+          e.try(:[], 'selections')
+        end&.flatten&.select { |a| a&.dig('entrant', 'id') == m['winnerId'] }&.map { |e| e.try(:[], 'selectionValue') }&.uniq
+
+        loser_character_smashgg_ids = m['games']&.map do |e|
+          e.try(:[], 'selections')
+        end&.flatten&.reject { |a| a&.dig('entrant', 'id') == m['winnerId'] }&.map { |e| e.try(:[], 'selectionValue') }&.uniq
+
         winner_params = {
-          smashgg_id: winner_player.dig('player', 'id'), name: winner_player.dig('player', 'gamerTag'),
-          smashgg_user_id: winner_player.dig('user', 'id'), prefix: winner_player.dig('player', 'prefix')
+          smashgg_id: winner_player.map { |p| p.dig('player', 'id') }.sort.join(''),
+          name: winner_player.map { |p| p.dig('player', 'gamerTag') }.sort.join(' / '),
+          smashgg_user_id: (winner_player.first.dig('user', 'id') if winner_player.size == 1),
+          prefix: (winner_player.first.dig('player', 'prefix') if winner_player.size == 1),
+          team: winner_player.count > 1
         }
 
         loser_params = {
-          smashgg_id: loser_player.dig('player', 'id'), name: loser_player.dig('player', 'gamerTag'),
-          smashgg_user_id: loser_player.dig('user', 'id'), prefix: winner_player.dig('player', 'prefix')
+          smashgg_id: loser_player.map { |p| p.dig('player', 'id') }.sort.join(''),
+          name: loser_player.map { |p| p.dig('player', 'gamerTag') }.sort.join(' / '),
+          smashgg_user_id: (loser_player.first.dig('user', 'id') if loser_player.size == 1),
+          prefix: (loser_player.first.dig('player', 'prefix') if loser_player.size == 1),
+          team: loser_player.count > 1
         }
-        winner = Player.find_by(smashgg_id: winner_player.dig('player', 'id'))
-        winner ? winner.update(winner_params) : winner = Player.create(winner_params)
 
-        loser = Player.find_by(smashgg_id: loser_player.dig('player', 'id'))
+        winner = Player.find_by(smashgg_id: winner_params[:smashgg_id])
+        winner ? winner.update(winner_params) : winner = Player.create(winner_params)
+        wcharacter_ids = (winner.character_ids + Character.where(smashgg_id: winner_character_smashgg_ids).pluck(:id)).uniq
+        winner.update(character_ids: wcharacter_ids)
+
+        loser = Player.find_by(smashgg_id: loser_params[:smashgg_id])
         loser ? loser.update(loser_params) : loser = Player.create(loser_params)
+        lcharacter_ids = (loser.character_ids + Character.where(smashgg_id: loser_character_smashgg_ids).pluck(:id)).uniq
+        loser.update(character_ids: lcharacter_ids)
 
         tournament = Tournament.find_by(smashgg_id: smashgg_event_id)
 
@@ -190,7 +210,7 @@ class Tournament < ApplicationRecord
           smashgg_id: m['id'], tournament_id: tournament&.id,
           winner_player_id: winner.id, loser_player_id: loser.id, vod_url: m['vod_url'],
           is_loser_bracket: m['round']&.negative?, display_score: m['displayScore'], full_round_text: m['fullRoundText'],
-          round: m['round'], date: tournament&.date
+          round: m['round'], date: tournament&.date, teams: winner_player.size > 1
 
         }
         db_match = Match.find_by(smashgg_id: m['id'])
@@ -229,6 +249,30 @@ class Tournament < ApplicationRecord
               round
               fullRoundText
               displayScore
+
+              games {
+                id
+                stage {
+                  id
+                  name
+                }
+                selections {
+                  id
+                  selectionType
+                  selectionValue
+                  entrant {
+                    id
+                    name
+                    participants {
+                      player {
+                        id
+                        gamerTag
+                      }
+                    }
+                  }
+                }
+              }
+
               slots {
                 entrant {
                   id

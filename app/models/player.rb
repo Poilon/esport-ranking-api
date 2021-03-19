@@ -10,43 +10,43 @@ class Player < ApplicationRecord
   has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id', dependent: :destroy
 
   def rank
-    Player.order(elo: :desc).pluck(:id).index(id).to_i + 1
+    Player.order(score: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def country_rank
     return nil unless country
 
-    Player.where(country: country).order(elo: :desc).pluck(:id).index(id).to_i + 1
+    Player.where(country: country).order(score: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def state_rank
     return nil if !state || !country
 
-    Player.where(country: country, state: state).order(elo: :desc).pluck(:id).index(id).to_i + 1
+    Player.where(country: country, state: state).order(score: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def city_rank
     return nil if !country || !city
 
     if state
-      Player.where(country: country, state: state, city: city).order(elo: :desc).pluck(:id).index(id).to_i + 1
+      Player.where(country: country, state: state, city: city).order(score: :desc).pluck(:id).index(id).to_i + 1
     else
-      Player.where(country: country, city: city).order(elo: :desc).pluck(:id).index(id).to_i + 1
+      Player.where(country: country, city: city).order(score: :desc).pluck(:id).index(id).to_i + 1
     end
   end
 
   def tournaments_diffs
-    return {}.to_json if elo_by_times.blank?
+    return {}.to_json # if elo_by_times.blank?
 
-    groups = elo_by_times.order(created_at: :asc).deep_pluck(
-      :elo, match: { tournament: :id }
-    ).group_by { |e| e[:match][:tournament]['id'] }
+    # groups = elo_by_times.order(created_at: :asc).deep_pluck(
+    #   :elo, match: { tournament: :id }
+    # ).group_by { |e| e[:match][:tournament]['id'] }
 
-    current_elo = 1500
-    groups.each_with_object({}) do |(t_id, ebts), h|
-      h[t_id] = { from: current_elo, to: ebts.last['elo'] }
-      current_elo = ebts.last['elo']
-    end.to_json
+    # current_elo = 1500
+    # groups.each_with_object({}) do |(t_id, ebts), h|
+    #   h[t_id] = { from: current_elo, to: ebts.last['elo'] }
+    #   current_elo = ebts.last['elo']
+    # end.to_json
   end
 
   def elo_map
@@ -130,6 +130,7 @@ class Player < ApplicationRecord
     <<~STRING
       query UserQuery {
         user(id: #{smashgg_user_id}) {
+          genderPronoun
           authorizations {
             externalUsername
             type
@@ -159,15 +160,15 @@ class Player < ApplicationRecord
   end
 
   def best_win
-    winning_matches.joins(:loser).order('players.elo desc').first
+    winning_matches.joins(:loser).order('players.score desc').first
   end
 
   def best_wins(number)
-    winning_matches.joins(:loser).order('players.elo desc').first(number)
+    winning_matches.joins(:loser).order('players.score desc').first(number)
   end
 
   def worst_lose
-    losing_matches.joins(:winner).order('players.elo asc').first
+    losing_matches.joins(:winner).order('players.score asc').first
   end
 
   def elo_diffs
@@ -187,6 +188,7 @@ class Player < ApplicationRecord
       current_mpgr_ranking: smashgg_user.dig('data', 'user', 'player', 'rankings')&.reject do |r|
         r['title'] != 'MPGR: 2019 MPGR'
       end.try(:[], 0).try(:[], 'rank'),
+      gender_pronoun: smashgg_user.dig('data', 'user', 'genderPronoun'),
       username: smashgg_user.dig('data', 'user', 'name'),
       country: smashgg_user.dig('data', 'user', 'location', 'country'),
       state: smashgg_user.dig('data', 'user', 'location', 'state'),
@@ -215,7 +217,7 @@ class Player < ApplicationRecord
   end
 
   def self.hydrate_players_info
-    players = Player.where('smashgg_user_id is not null and profile_picture_url is null and country is null').order(elo: :desc)
+    players = Player.where('smashgg_user_id is not null').order(elo: :desc)
 
     bar = ProgressBar.new(players.count)
 
