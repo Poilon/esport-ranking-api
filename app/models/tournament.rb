@@ -43,7 +43,7 @@ class Tournament < ApplicationRecord
         next unless player
 
         params = {
-          smashgg_id: player.map { |p| p.dig('id') }.sort.join(''),
+          smashgg_id: nil,
           name: player.map { |p| p.dig('gamerTag') }.sort.join(' / '),
           team: player.count > 1
         }
@@ -100,7 +100,7 @@ class Tournament < ApplicationRecord
     end.map { |e| e['id'] }
   end
 
-  def self.import_from_smashgg(time = 1483225200)
+  def self.import_from_smashgg(time = 1609455600)
     game_id = Game.find_by(smashgg_id: 1).id
     begin
       pages_number = query_smash_gg(tournaments_total_pages(time)).dig('data', 'tournaments', 'pageInfo', 'totalPages')
@@ -123,8 +123,10 @@ class Tournament < ApplicationRecord
 
         (tournament['events'] || []).each do |event|
 
-          next if event['type'] != 1
+          next if event['type'] != 1 && event['type'] != 5
           next if event['videogame']['id'] != 1
+          next if event['name'].downcase.include?('volleyball') || event['name'].downcase.include?('voleyball') || event['name'].downcase.include?('vollyball')
+          next if tournament['name'].downcase.include?('volleyball') || tournament['name'].downcase.include?('voleyball') || tournament['name'].downcase.include?('vollyball')
 
           params = {
             smashgg_link_url: "https://smash.gg/#{event['slug']}",

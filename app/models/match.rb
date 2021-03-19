@@ -37,6 +37,8 @@ class Match < ApplicationRecord
     return if played == true
 
     EloRating.k_factor = is_loser_bracket ? 20 : 40
+    loser.update(elo: 1500) if !loser.elo
+    winner.update(elo: 1500) if !winner.elo
 
     m = EloRating::Match.new
     m.add_player(rating: loser.elo)
