@@ -11,7 +11,7 @@ class Tournament < ApplicationRecord
   end
 
   def self.import_tournament_results_and_matchs_from_smashgg
-    tournament_ids = Match.where('display_score ilike ?', '%Michael%').joins(:tournament).deep_pluck(
+    tournament_ids = Match.joins(:tournament).deep_pluck(
       tournament: %i[id smashgg_id]
     ).uniq.map do |e|
       [e[:tournament]['id'], e[:tournament]['smashgg_id']]
