@@ -33,7 +33,7 @@ class Tournament < ApplicationRecord
 
     find_by(smashgg_id: smashgg_id).update(processed: true)
 
-    return if !event || event.dig('state') != 'COMPLETED'
+    return if !event
 
     pages_count = event.dig('standings', 'pageInfo', 'totalPages') || 0
     pages_count.times do |page|
