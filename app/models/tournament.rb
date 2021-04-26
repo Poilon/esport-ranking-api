@@ -11,16 +11,22 @@ class Tournament < ApplicationRecord
   end
 
   def self.import_tournament_results_and_matchs_from_smashgg
-    tournament_ids = Tournament.all.pluck(:id, :smashgg_id)
+    a = Tournament.all.pluck(:id) - Tournament.joins(:matches).pluck(:id)
+    b = Tournament.all.pluck(:id) - Tournament.joins(:results).pluck(:id)
+    match_tournament_ids = Tournament.where(id: a).all.pluck(:id, :smashgg_id)
+    result_tournament_ids = Tournament.where(id: b).all.pluck(:id, :smashgg_id)
 
-    bar = ProgressBar.new(tournament_ids.count)
+    bar = ProgressBar.new(match_tournament_ids.count)
+    match_tournament_ids.each do |id, smashgg_id|
+      bar.increment!
+      find(id).matches.destroy_all
+      import_matches_of_tournament_from_smashgg(smashgg_id)
+    end
 
-    tournament_ids.each do |id, smashgg_id|
+    bar = ProgressBar.new(result_tournament_ids.count)
+    result_tournament_ids.each do |id, smashgg_id|
       bar.increment!
       find(id).results.destroy_all
-      find(id).matches.destroy_all
-
-      import_matches_of_tournament_from_smashgg(smashgg_id)
       import_tournament_results(smashgg_id)
     end
   end
@@ -29,6 +35,7 @@ class Tournament < ApplicationRecord
     bar&.increment!
 
     sleep(1)
+
     event = query_smash_gg(result_query(smashgg_id, 1)).dig('data', 'event')
 
     find_by(smashgg_id: smashgg_id).update(processed: true)
@@ -43,7 +50,7 @@ class Tournament < ApplicationRecord
         next unless player
 
         params = {
-          smashgg_id: nil,
+          smashgg_id: player.map { |p| p.dig('id') }.sort.join(''),
           name: player.map { |p| p.dig('gamerTag') }.sort.join(' / '),
           team: player.count > 1
         }
@@ -315,7 +322,7 @@ class Tournament < ApplicationRecord
   def self.single_tournament_query(tournament_id)
     <<~STRING
       query SingleTournamentQuery {
-        tournament(id: "#{tournament_id}") {
+        tournament(slug: "#{tournament_id}") {
           id
           name
           endAt
