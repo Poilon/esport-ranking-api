@@ -10,28 +10,28 @@ class Player < ApplicationRecord
   has_many :losing_matches, class_name: 'Match', foreign_key: 'loser_player_id', dependent: :destroy
 
   def rank
-    Player.order(score: :desc).pluck(:id).index(id).to_i + 1
+    Player.order(score: :desc).where(team: team).pluck(:id).index(id).to_i + 1
   end
 
   def country_rank
     return nil unless country
 
-    Player.where(country: country).order(score: :desc).pluck(:id).index(id).to_i + 1
+    Player.where(country: country).where(team: team).order(score: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def state_rank
     return nil if !state || !country
 
-    Player.where(country: country, state: state).order(score: :desc).pluck(:id).index(id).to_i + 1
+    Player.where(country: country, state: state).where(team: team).order(score: :desc).pluck(:id).index(id).to_i + 1
   end
 
   def city_rank
     return nil if !country || !city
 
     if state
-      Player.where(country: country, state: state, city: city).order(score: :desc).pluck(:id).index(id).to_i + 1
+      Player.where(country: country, state: state, city: city).where(team: team).order(score: :desc).pluck(:id).index(id).to_i + 1
     else
-      Player.where(country: country, city: city).order(score: :desc).pluck(:id).index(id).to_i + 1
+      Player.where(country: country, city: city).where(team: team).order(score: :desc).pluck(:id).index(id).to_i + 1
     end
   end
 
