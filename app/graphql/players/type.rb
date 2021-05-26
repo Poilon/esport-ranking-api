@@ -61,7 +61,9 @@ Players::Type = GraphQL::ObjectType.define do
   field :created_at, types.String
   field :updated_at, types.String
   field :smashgg_id, types.Int
-  field :name, types.String
+  field :name, types.String do
+    resolve ->(obj, _, _) { obj.prefix.present? ? obj.prefix.to_s + ' | ' + obj.name.to_s : obj.name.to_s }
+  end
   field :location, types.String
   field :city, types.String
   field :sub_state, types.String
