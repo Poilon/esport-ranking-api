@@ -4,6 +4,14 @@ class Tournament < ApplicationRecord
   has_many :results, dependent: :destroy
   belongs_to :game
 
+  def self.import_from_slug(slug:)
+    import_from_smashgg_id(slug)
+    where('name ilike ?', '%ladder%').destroy_all
+    import_tournament_results_and_matchs_from_smashgg
+    Match.run
+    Match.run_score
+  end
+
   def self.import_year_by_year
     (2015..Time.now.year).each do |year|
       import_from_smashgg(Date.parse("#{year}-01-01").to_time.to_i)
